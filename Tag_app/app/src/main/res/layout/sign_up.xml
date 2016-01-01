@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="horizontal" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+
+    <EditText
+        android:id="@+id/email_in"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:hint="email"
+        android:layout_above="@+id/password_in"
+        android:layout_alignLeft="@+id/signup_button"
+        android:layout_alignStart="@+id/signup_button" />
+
+
+    <EditText
+        android:id="@+id/name_in"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:hint="name"
+        android:layout_above="@+id/email_in"
+        android:layout_alignLeft="@+id/password_in"
+        android:layout_alignStart="@+id/password_in" />
+
+
+    <EditText
+        android:id="@+id/username_in"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:hint="username"
+        android:layout_above="@+id/name_in"
+        android:layout_alignLeft="@+id/name_in"
+        android:layout_alignStart="@+id/name_in" />
+
+    <EditText
+        android:id="@+id/password_in"
+        android:inputType="textPassword"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="52dp"
+        android:hint="password"
+        android:layout_above="@+id/signup_button"
+        android:layout_centerHorizontal="true" />
+
+    <EditText
+        android:id="@+id/password_confirm"
+        android:inputType="textPassword"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:hint="confirm password"
+        android:layout_above="@+id/signup_button"
+        android:layout_centerHorizontal="true" />
+
+    <Button
+        android:id="@+id/signup_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:layout_marginBottom="156dp"
+        android:text="Sign Up"
+        android:layout_alignParentBottom="true"
+        android:layout_alignRight="@+id/password_in"
+        android:layout_alignEnd="@+id/password_in"
+        android:onClick="signup_confirm"/>
+
+
+
+
+</RelativeLayout>
