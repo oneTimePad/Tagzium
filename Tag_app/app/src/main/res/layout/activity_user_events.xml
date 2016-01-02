@@ -7,23 +7,7 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context="com.tagger.lie.tag_app.UserEventsActivity">
+    tools:context="com.tagger.lie.tag_app.UserEventsActivity"
+    android:id="@+id/events">
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Create"
-        android:id="@+id/create_event"
-        android:layout_centerVertical="true"
-        android:layout_centerHorizontal="true" />
-
-    <EditText
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/event_name"
-        android:hint="event name"
-        android:layout_alignParentTop="true"
-        android:layout_alignLeft="@+id/create_event"
-        android:layout_alignStart="@+id/create_event"
-        android:layout_marginTop="74dp" />
 </RelativeLayout>

@@ -8,14 +8,14 @@ from rest_framework.authtoken.models import Token
 
 class Profile(AbstractUser):
 
-    events_joined = models.ForeignKey('Event',related_name='events')
 
+    USERNAME_FIELD='username'
 
     @property
     def user_token(self):
         return Token.objects.get(user=self)
 
 class Event(models.Model):
-
-    creator = models.ForeignKey('Profile',related_name="creator")
     event_name = models.CharField(max_length=200)
+    creator = models.ForeignKey('Profile',related_name="creator")
+    users = models.ManyToManyField(Profile,related_name='users')

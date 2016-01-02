@@ -62,7 +62,7 @@ public class UserPageActivity extends ActionBarActivity
             String token = (String)user_info.get("token");
             JSONObject user_json = (JSONObject)user_info.get("user");
 
-
+            Log.e("DSSDDAD","lol"+user_json.get("first_name"));
 
             current_user = new User((String)user_json.get("username"),(String)user_json.get("email"),(String)user_json.get("first_name"),token);
 
@@ -71,6 +71,7 @@ public class UserPageActivity extends ActionBarActivity
             Log.e("UserPage", e.toString());
         }
 
+
     }
 
 
@@ -78,9 +79,10 @@ public class UserPageActivity extends ActionBarActivity
         current_user = (User)newI.getExtras().get("user");
 
     }
-
+    @Override
     public  void onResume(){
         super.onResume();
+        Log.e("cur", "lol" + current_user.first_name);
         getSupportActionBar().setTitle(current_user.first_name);
     }
 

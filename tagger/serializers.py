@@ -11,14 +11,18 @@ from .models import Profile, Event
 class ProfileSerializer(serializers.ModelSerializer):
 
 
+
     class Meta:
         model = Profile
         fields = ('username','email','first_name')
 
 class EventSerializer(serializers.ModelSerializer):
+    #creator_s = ProfileSerializer(source='creator')
     class Meta:
         model = Event
-        fields = ('event_name','creator')
+        fields = ('creator','event_name')
+    def create(self):
+        return Event(**self.validated_data)
 
 
 class PasswordSerializer(serializers.Serializer):

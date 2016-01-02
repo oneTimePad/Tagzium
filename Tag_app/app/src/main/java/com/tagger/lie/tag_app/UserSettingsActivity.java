@@ -36,6 +36,7 @@ public class UserSettingsActivity extends ActionBarActivity {
     int set_from =1;
 
 
+
     private void key_dis(final EditText edit){
 
         edit.setOnKeyListener(new View.OnKeyListener() {
@@ -170,10 +171,10 @@ public class UserSettingsActivity extends ActionBarActivity {
                                     Toast.makeText(UserSettingsActivity.this, "Password Successfully Changed", Toast.LENGTH_SHORT).show();
                                     break;
                                 case 401:
-                                    Log.e("change_password", "Invalid authentication");
                                     Toast.makeText(UserSettingsActivity.this, "Session Expired", Toast.LENGTH_SHORT).show();
                                     startActivity(new Intent(UserSettingsActivity.this, MainActivity.class));
-                                    finish();
+                                    finish(); Log.e("change_password", "Invalid authentication");
+
                                     break;
                                 case 400:
                                     Log.e("change_password", "Invalid old password");

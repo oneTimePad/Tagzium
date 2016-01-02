@@ -117,12 +117,20 @@ class UserViewSet(viewsets.ModelViewSet):
 class EventViewSet(viewsets.ModelViewSet):
     authentication_classes = (TokenAuthentication,)
     permission_classes = (ExpiringTokenAuthentication,)
+    serializer_class = EventSerializer
+    @list_route(methods=['post'])
+    def creates(self,request):
+        
+        input = {'event_name':request.data['event_name'],'creator':request.user.pk}
+        event=EventSerializer(data=input)
+        if not event.is_valid():
+            return Response(event.errors,status=status.HTTP_400_BAD_REQUEST)
+        event = event.create()
 
-    def create(self,request):
-        pdb.set_trace()
-        event=EventSerializer(data={'event_name':request['event_name'],'creator':request.user})
-        ev_Ser = EventSerializer(event)
-        return Response(ev_Ser.data)
+        return Response({'Status':'Success'})
+
+    def retrieve(self,request):
+        pass
 
 
 
@@ -163,10 +171,11 @@ class Signup(APIView):
         name =  request.data['name']
         email = request.data['email']
         try:
+
             User  = get_user_model()
             user = User.objects.create_user(user_name,email,password)
             user.first_name = name
-
+            user.save()
         except IntegrityError:
             return Response({"Status":"Exists"})
 
