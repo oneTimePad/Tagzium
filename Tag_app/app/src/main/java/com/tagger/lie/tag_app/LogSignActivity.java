@@ -18,6 +18,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -166,13 +167,13 @@ public class LogSignActivity extends ActionBarActivity {
                             Log.e("SIGN UP",""+signup.getStatus());
                         }
 
-                        JSONObject response = signup.getResponse();
+                        JSONArray response = signup.getResponse();
 
 
-                        if(response.getString("Status").equals("Exists")){
+                        if(response.getJSONObject(0).getString("Status").equals("Exists")){
                             Toast.makeText(LogSignActivity.this,"Username Already Exists",Toast.LENGTH_SHORT).show();
                         }
-                        else if(response.getString("Status").equals("Success")){
+                        else if(response.getJSONObject(0).getString("Status").equals("Success")){
                             Toast.makeText(LogSignActivity.this,"User Successfully Created",Toast.LENGTH_SHORT).show();
 
                         }
@@ -226,9 +227,11 @@ public class LogSignActivity extends ActionBarActivity {
                         switch(log.getStatus()){
                             case 200:
                                 Toast.makeText(LogSignActivity.this,"Login Successful",Toast.LENGTH_SHORT).show();
-                                JSONObject response = log.getResponse();
+                                JSONArray response = log.getResponse();
+
+
                                 Intent toUserPage = new Intent(LogSignActivity.this,UserPageActivity.class);
-                                toUserPage.putExtra("response",response.toString());
+                                toUserPage.putExtra("response",response.getJSONObject(0).toString());
 
                                 startActivity(toUserPage);
                                 Log.e("finished","finished");

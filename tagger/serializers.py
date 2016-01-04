@@ -24,6 +24,11 @@ class EventSerializer(serializers.ModelSerializer):
     def create(self):
         return Event(**self.validated_data)
 
+class UserEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Event
+        fields = ('event_name',)
+
 
 class PasswordSerializer(serializers.Serializer):
     new_password = serializers.CharField()

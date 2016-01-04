@@ -1,5 +1,7 @@
 package com.tagger.lie.tag_app;
 
+import org.json.JSONArray;
+
 import java.io.Serializable;
 
 /**
@@ -11,6 +13,7 @@ public class User implements Serializable{
     String email;
     String first_name;
     String curr_token;
+    String events;
 
     public User(String username,String email,String first_name, String curr_token){
         this.username = username;

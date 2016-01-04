@@ -78,6 +78,7 @@ public class UserPageActivity extends ActionBarActivity
     public void onNewIntent(Intent newI){
         current_user = (User)newI.getExtras().get("user");
 
+
     }
     @Override
     public  void onResume(){
@@ -171,6 +172,10 @@ public class UserPageActivity extends ActionBarActivity
         int id = item.getItemId();
 
         if (id == R.id.nav_camera) {
+            Intent toCamera = new Intent(UserPageActivity.this,CameraActivity.class);
+            toCamera.putExtra("User",current_user);
+            startActivity(toCamera);
+
             // Handle the camera action
         } else if (id == R.id.nav_user_settings) {
             Intent toUserSettings = new Intent(UserPageActivity.this,UserSettingsActivity.class);

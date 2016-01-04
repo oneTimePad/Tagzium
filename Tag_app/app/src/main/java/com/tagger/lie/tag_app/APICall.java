@@ -4,6 +4,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -81,7 +82,7 @@ public class APICall {
             con.setDoInput(true);
             con.setDoOutput(true);
             con.setUseCaches(false);
-
+            Log.e("Method",method);
             con.setRequestMethod(method);
             this.request = request;
 
@@ -125,19 +126,58 @@ public class APICall {
 
     }
 
-    public JSONObject getResponse(){
-        try {
-            InputStream in = con.getInputStream();
-            JSONObject response = new JSONEncoder(in).encode();
-            return response;
+    private  class ResponseThread extends HandlerThread{
+        Handler mHandler;
+        JSONArray response;
+        boolean lock= false;
+        ResponseThread(){
+            super("Response Thread");
+            start();
+            mHandler = new Handler(getLooper());
+
         }
-        catch(JSONException e){
-            Log.e("APICall",e.toString());
+
+        public boolean isLocked(){
+            return lock;
         }
-        catch(IOException e){
-            Log.e("APICall",e.toString());
+
+        public void getResponse(){
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        InputStream in = con.getInputStream();
+                        response = new JSONEncoder(in).encodeJSON();
+
+                    }
+                    catch(JSONException e){
+
+                        Log.e("APICall",e.toString());
+                    }
+                    catch(IOException e){
+                        Log.e("APICall",e.toString());
+                    }
+                    lock=false;
+
+                }
+            });
+
+
         }
-        return null;
+    }
+
+
+    public JSONArray getResponse(){
+
+        ResponseThread r = new ResponseThread();
+        r.lock = true;
+        r.getResponse();
+
+        while(r.isLocked()){
+
+        }
+
+        return r.response;
 
     }
 }

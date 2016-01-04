@@ -23,6 +23,8 @@ from .models import *
 from rest_framework import viewsets
 from django.contrib.auth import get_user_model
 from rest_framework.decorators import list_route
+from django.core.cache import cache
+
 
 
 
@@ -113,6 +115,21 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response({'Status':'Success'})
 
 
+@receiver(post_save,sender=Event)
+def on_recent_event(sender, instance=None, created=False, **kwargs):
+
+    if not cache.has_key(instance.creator.username+'_recent_events'):
+        recent_events = []
+        recent_events.append(instance)
+        cache.set(instance.creator.username+'_recent_events',recent_events)
+    else:
+        recent_events = cache.get(instance.creator.username+'_recent_events')
+        if instance in recent_events:
+            recent_events.remove(instance)
+        recent_events.append(instance)
+        cache.delete(instance.creator.username+'_recent_events')
+        cache.put(instance+'_recent_events',recent_events)
+
 
 class EventViewSet(viewsets.ModelViewSet):
     authentication_classes = (TokenAuthentication,)
@@ -120,17 +137,36 @@ class EventViewSet(viewsets.ModelViewSet):
     serializer_class = EventSerializer
     @list_route(methods=['post'])
     def creates(self,request):
-        
+
         input = {'event_name':request.data['event_name'],'creator':request.user.pk}
         event=EventSerializer(data=input)
         if not event.is_valid():
             return Response(event.errors,status=status.HTTP_400_BAD_REQUEST)
         event = event.create()
+        event.save()
 
         return Response({'Status':'Success'})
+    @list_route(methods=['post'])
+    def retrieve_users(self,request):
 
-    def retrieve(self,request):
-        pass
+
+        if len(request.user.creator.all()) == 0:
+            return Response('no_events',status=status.HTTP_400_BAD_REQUEST)
+
+        if cache.has_key('return_all'):
+            query_ser = UserEventSerializer(request.user.creator.all(),many=True)
+            cache.delete('return_all')
+            return Response(query_ser.data)
+
+        if not cache.has_key(request.user.username+'_recent_events'):
+            return Response('no_change',status=status.HTTP_400_BAD_REQUEST)
+        recent_events = cache.get(request.user.username+'_recent_events')
+        query_ser = UserEventSerializer(recent_events,many=True)
+        cache.delete(request.user.username+'_recent_events')
+
+        return Response(query_ser.data)
+
+
 
 
 
@@ -152,7 +188,7 @@ class ObtainExpiringAuthToken(ObtainAuthToken):
             User = get_user_model()
             user =User.objects.get(username=serializer.validated_data['user'])
             user_ser = ProfileSerializer(user)
-
+            cache.set("return_all",1)
             return Response({'user':user_ser.data,'token':token.key})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 '''
