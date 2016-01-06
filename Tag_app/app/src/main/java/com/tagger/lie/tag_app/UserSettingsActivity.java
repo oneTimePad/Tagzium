@@ -25,6 +25,7 @@ import android.widget.Toast;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.net.ConnectException;
 import java.util.ArrayList;
 
 public class UserSettingsActivity extends ActionBarActivity {
@@ -160,9 +161,16 @@ public class UserSettingsActivity extends ActionBarActivity {
 
                             request.put("old_password", old_Pass.getText().toString());
                             request.put("new_password", new_Pass.getText().toString());
-                            APICall chg = new APICall("POST", "/users/change_password/", request);
+                            APICall chg = new APICall(getApplicationContext(),"POST", "/users/change_password/", request);
                             chg.authenticate(user.curr_token);
-                            chg.connect();
+                            try {
+
+                                chg.connect();
+                            }
+                            catch(ConnectException e){
+                                return;
+                            }
+
                             int status = chg.getStatus();
                             switch (status) {
 
@@ -236,14 +244,19 @@ public class UserSettingsActivity extends ActionBarActivity {
 
                                 request.put("new_username", new_user.getText().toString());
 
-                                APICall chg = new APICall("POST", "/users/change_username/", request);
+                                APICall chg = new APICall(getApplicationContext(),"POST", "/users/change_username/", request);
                                 chg.authenticate(user.curr_token);
-                                chg.connect();
+                                try {
+                                    chg.connect();
+                                }
+                                catch (ConnectException e){
+                                    return;
+                                }
                                 int status = chg.getStatus();
                                 switch (status) {
 
                                     case 200:
-
+                                        user.username = (String)request.get("new_username");
                                         Log.e("change_username", "Success");
                                         Toast.makeText(UserSettingsActivity.this, "Username Successfully Changed", Toast.LENGTH_SHORT).show();
                                         break;
@@ -309,9 +322,14 @@ public class UserSettingsActivity extends ActionBarActivity {
 
                             request.put("new_email", new_email.getText().toString());
 
-                            APICall chg = new APICall("POST", "/users/change_email/", request);
+                            APICall chg = new APICall(getApplicationContext(),"POST", "/users/change_email/", request);
                             chg.authenticate(user.curr_token);
-                            chg.connect();
+                            try {
+                                chg.connect();
+                            }
+                            catch(ConnectException e){
+                                return;
+                            }
                             int status = chg.getStatus();
                             switch (status) {
 
@@ -382,9 +400,14 @@ public class UserSettingsActivity extends ActionBarActivity {
 
                             request.put("new_name", new_name.getText().toString());
 
-                            APICall chg = new APICall("POST", "/users/change_name/", request);
+                            APICall chg = new APICall(getApplicationContext(),"POST", "/users/change_name/", request);
                             chg.authenticate(user.curr_token);
-                            chg.connect();
+                            try {
+                                chg.connect();
+                            }
+                            catch (ConnectException e){
+                                return;
+                            }
                             int status = chg.getStatus();
                             switch (status) {
 

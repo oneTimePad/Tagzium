@@ -24,6 +24,7 @@ from rest_framework import viewsets
 from django.contrib.auth import get_user_model
 from rest_framework.decorators import list_route
 from django.core.cache import cache
+from django.core.files.uploadedfile import InMemoryUploadedFile
 
 
 

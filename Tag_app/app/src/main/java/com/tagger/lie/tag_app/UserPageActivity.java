@@ -23,6 +23,8 @@ import android.widget.Toast;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.net.ConnectException;
+
 public class UserPageActivity extends ActionBarActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
@@ -62,7 +64,7 @@ public class UserPageActivity extends ActionBarActivity
             String token = (String)user_info.get("token");
             JSONObject user_json = (JSONObject)user_info.get("user");
 
-            Log.e("DSSDDAD","lol"+user_json.get("first_name"));
+
 
             current_user = new User((String)user_json.get("username"),(String)user_json.get("email"),(String)user_json.get("first_name"),token);
 
@@ -83,7 +85,7 @@ public class UserPageActivity extends ActionBarActivity
     @Override
     public  void onResume(){
         super.onResume();
-        Log.e("cur", "lol" + current_user.first_name);
+
         getSupportActionBar().setTitle(current_user.first_name);
     }
 
@@ -130,9 +132,16 @@ public class UserPageActivity extends ActionBarActivity
 
 
     public void logout(){
-        APICall logout = new APICall("POST","/users/logout/",new JSONObject());
+        APICall logout = new APICall(getApplicationContext(),"POST","/users/logout/",new JSONObject());
         logout.authenticate(current_user.curr_token);
-        logout.connect();
+        try {
+            logout.connect();
+        }
+        catch(ConnectException e){
+            Toast.makeText(UserPageActivity.this,"Logout Failed,Closing anyway",Toast.LENGTH_LONG).show();
+            startActivity(new Intent(UserPageActivity.this, MainActivity.class));
+            finish();
+        }
         switch(logout.getStatus()){
 
             case 200:

@@ -1,8 +1,10 @@
 package com.tagger.lie.tag_app;
 
+import android.content.Context;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
+import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -13,6 +15,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
+import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
@@ -26,7 +29,8 @@ public class APICall {
     int status;
     private HttpURLConnection con;
     JSONObject request;
-
+    Context ctx;
+    boolean connection_status = true;
 
     private class ConnectThread extends HandlerThread{
 
@@ -65,6 +69,12 @@ public class APICall {
 
 
                     }
+                    catch (ConnectException e){
+                        Toast.makeText(ctx, "Failed to Connect to Service", Toast.LENGTH_SHORT).show();
+                        connection_status = false;
+                        Lock = false;
+
+                    }
                     catch (IOException e){
                         Log.e("APICall ConnectThread", e.toString());
                     }
@@ -73,7 +83,7 @@ public class APICall {
         }
     }
 
-    public APICall(String method,String call,JSONObject request){
+    public APICall(Context ctx,String method,String call,JSONObject request){
         try{
             con = (HttpURLConnection)(new URL("http://192.168.1.170:2000"+call).openConnection());
 
@@ -82,7 +92,7 @@ public class APICall {
             con.setDoInput(true);
             con.setDoOutput(true);
             con.setUseCaches(false);
-            Log.e("Method",method);
+
             con.setRequestMethod(method);
             this.request = request;
 
@@ -101,7 +111,7 @@ public class APICall {
         }
     }
 
-    public void connect(){
+    public void connect() throws ConnectException{
 
         ConnectThread t = new ConnectThread();
         t.Lock = true;
@@ -109,6 +119,11 @@ public class APICall {
         while(t.isLocked()){
 
         }
+
+        if(!connection_status){
+            throw new ConnectException("failed to connect");
+        }
+
 
 
 

@@ -1,17 +1,24 @@
 package com.tagger.lie.tag_app;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.graphics.drawable.Drawable;
 import android.hardware.Camera;
 import android.media.AudioManager;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
+import android.util.Base64;
 import android.util.Log;
 import android.view.Display;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -19,12 +26,19 @@ import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 public class CameraActivity extends AppCompatActivity {
 
@@ -35,6 +49,7 @@ public class CameraActivity extends AppCompatActivity {
     CameraHandler mThread;
     SurfaceView sf;
     SurfaceHolder sH;
+    FloatingActionButton bt;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,7 +57,7 @@ public class CameraActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
 
-
+        current_user = (User)getIntent().getExtras().get("User");
 
 
        sf = new SurfaceView(this);
@@ -55,8 +70,36 @@ public class CameraActivity extends AppCompatActivity {
                 mThread.takePic();
             }
         });
+        bt = new FloatingActionButton(this);
+        bt.setImageResource(R.drawable.ic_camera_front_24dp);
+
+        bt.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                onSwitch(v);
+            }
+        });
+
+        RelativeLayout.LayoutParams btD = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,RelativeLayout.LayoutParams.WRAP_CONTENT);
+        btD.addRule(RelativeLayout.ALIGN_PARENT_RIGHT,RelativeLayout.TRUE);
+        btD.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
         RelativeLayout.LayoutParams pr = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT,RelativeLayout.LayoutParams.MATCH_PARENT);
-        ((RelativeLayout) findViewById(R.id.camera_layout)).addView(sf,pr);
+        RelativeLayout.LayoutParams btB = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,RelativeLayout.LayoutParams.WRAP_CONTENT);
+        btB.addRule(RelativeLayout.ALIGN_PARENT_TOP,RelativeLayout.TRUE);
+        btB.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
+        FloatingActionButton btBack = new FloatingActionButton(this);
+        btBack.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
+            }
+        });
+        btBack.setImageResource(R.drawable.ic_arrow_back_24dp);
+
+
+        ((RelativeLayout) findViewById(R.id.camera_layout)).addView(sf, pr);
+        ((RelativeLayout)findViewById(R.id.camera_layout)).addView(bt, btD);
+        ((RelativeLayout)findViewById(R.id.camera_layout)).addView(btBack,btB);
         mThread = new CameraHandler();
         sH = sf.getHolder();
         sH.setKeepScreenOn(true);
@@ -70,12 +113,12 @@ public class CameraActivity extends AppCompatActivity {
                 }
                 try {
                     if (mCamera != null) {
-                        Log.e("HERE", "HERE");
+
 
                         mCamera.setPreviewDisplay(holder);
                         mCamera.startPreview();
                     } else {
-                        Log.e("LOG", "LOG");
+
                     }
                 } catch (IOException e) {
                     Log.e("Camera", e.toString());
@@ -193,6 +236,8 @@ public class CameraActivity extends AppCompatActivity {
 
 
 
+
+
         }
     };
 
@@ -200,8 +245,47 @@ public class CameraActivity extends AppCompatActivity {
         @Override
         public void onPictureTaken(byte[] data, Camera camera) {
 
+            ByteArrayOutputStream str = new ByteArrayOutputStream();
+            try {
+                str.write(data);
+            }
+            catch(IOException e){
+                Log.e("Pic Callback",e.toString());
+            }
+            String out = Base64.encodeToString(str.toByteArray(), Base64.DEFAULT).toString();
+            image_alert(out);
+
+
+            //mCamera.startPreview();
         }
     };
+
+    public void image_alert(final String out){
+        DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                switch (which){
+                    case DialogInterface.BUTTON_POSITIVE:
+                        //Yes button clicked
+                        break;
+
+                    case DialogInterface.BUTTON_NEGATIVE:
+                        Intent toNewEvent = new Intent(CameraActivity.this,UserEventsActivity.class);
+                        toNewEvent.putExtra("Create","1");
+                        Image.image = out;
+                        toNewEvent.putExtra("User", current_user);
+                        startActivity(toNewEvent);
+
+
+                        //No button clicked
+                        break;
+                }
+            }
+        };
+        AlertDialog.Builder builder = new AlertDialog.Builder(CameraActivity.this);
+        builder.setMessage("Add To Existing Event?").setPositiveButton("Yes", dialogClickListener)
+                .setNegativeButton("No", dialogClickListener).show();
+    }
     private class CameraHandler extends HandlerThread{
 
         Handler mHandler = null;
@@ -215,7 +299,19 @@ public class CameraActivity extends AppCompatActivity {
         }
 
         public void takePic(){
-            mCamera.takePicture(onShutter,null,onPicTake);
+
+
+
+                mCamera.autoFocus(new Camera.AutoFocusCallback() {
+                    @Override
+                    public void onAutoFocus(boolean success, Camera camera) {
+                        if(success) camera.takePicture(onShutter, null, onPicTake);
+                    }
+                });
+
+
+
+
         }
 
         public synchronized boolean isChanging(){
@@ -271,6 +367,7 @@ public class CameraActivity extends AppCompatActivity {
                 mCamera.setPreviewDisplay(sH);
                 mCamera.startPreview();
                 setCameraDisplayOrientation();
+                bt.setImageResource(R.drawable.ic_camera_rear_24dp);
             }
             catch (IOException e){
                 Log.e("camera",e.toString());
@@ -288,6 +385,7 @@ public class CameraActivity extends AppCompatActivity {
                 mCamera.setPreviewDisplay(sH);
                 mCamera.startPreview();
                 setCameraDisplayOrientation();
+                bt.setImageResource(R.drawable.ic_camera_front_24dp);
             }
             catch (IOException e){
                 Log.e("camera",e.toString());

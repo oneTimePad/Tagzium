@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -160,9 +161,13 @@ public class LogSignActivity extends ActionBarActivity {
 
 
 
-                        APICall signup = new APICall("POST","/auth/signup",request);
-                        signup.connect();
-
+                        APICall signup = new APICall(getApplicationContext(),"POST","/auth/signup",request);
+                        try {
+                            signup.connect();
+                        }
+                        catch (ConnectException e){
+                            return;
+                        }
                         if(signup.getStatus()!= 200){
                             Log.e("SIGN UP",""+signup.getStatus());
                         }
@@ -220,10 +225,14 @@ public class LogSignActivity extends ActionBarActivity {
 
 
 
-                        APICall log = new APICall("POST","/auth/login",request);
-                        log.connect();
+                        APICall log = new APICall(getApplicationContext(),"POST","/auth/login",request);
+                        try {
+                            log.connect();
+                        }
+                        catch (ConnectException e){
+                            return;
+                        }
 
-                        Log.e("status",""+log.getStatus());
                         switch(log.getStatus()){
                             case 200:
                                 Toast.makeText(LogSignActivity.this,"Login Successful",Toast.LENGTH_SHORT).show();
