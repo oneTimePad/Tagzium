@@ -1,5 +1,6 @@
 package com.tagger.lie.tag_app;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -7,6 +8,8 @@ import android.content.Intent;
 import android.graphics.drawable.Drawable;
 import android.hardware.Camera;
 import android.media.AudioManager;
+import android.net.Uri;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.support.design.widget.FloatingActionButton;
@@ -36,20 +39,31 @@ import android.widget.Toast;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 
 public class CameraActivity extends AppCompatActivity {
-
+    //logged in user
     User current_user;
+    //camera
     Camera mCamera;
+    //is back camera enabled
     boolean isBack =true;
-    Menu myMenu;
+
+    //thread for camera triggering
     CameraHandler mThread;
+    //surface view and holder
     SurfaceView sf;
     SurfaceHolder sH;
-    FloatingActionButton bt;
+    //action button for swapping camera view
+    FloatingActionButton switch_button;
+    //picture diretory
+    File pic_dir;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,56 +71,66 @@ public class CameraActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
 
+        //grab the current user
         current_user = (User)getIntent().getExtras().get("User");
 
 
-       sf = new SurfaceView(this);
+        sf = new SurfaceView(this);
         sf.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) {
+            public void onClick(View v) {                 //on surface touch,
                 while (mThread.isChanging()) {
 
                 }
-                mThread.takePic();
+                mThread.takePic();                    //take pic
             }
         });
-        bt = new FloatingActionButton(this);
-        bt.setImageResource(R.drawable.ic_camera_front_24dp);
+        switch_button= new FloatingActionButton(this);            // create floating button
+        switch_button.setImageResource(R.drawable.ic_camera_front_24dp);
 
-        bt.setOnClickListener(new View.OnClickListener() {
+        switch_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 onSwitch(v);
             }
-        });
+        });                                              //on user click, switch camera
 
-        RelativeLayout.LayoutParams btD = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,RelativeLayout.LayoutParams.WRAP_CONTENT);
-        btD.addRule(RelativeLayout.ALIGN_PARENT_RIGHT,RelativeLayout.TRUE);
-        btD.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
-        RelativeLayout.LayoutParams pr = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT,RelativeLayout.LayoutParams.MATCH_PARENT);
-        RelativeLayout.LayoutParams btB = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,RelativeLayout.LayoutParams.WRAP_CONTENT);
-        btB.addRule(RelativeLayout.ALIGN_PARENT_TOP,RelativeLayout.TRUE);
-        btB.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
-        FloatingActionButton btBack = new FloatingActionButton(this);
-        btBack.setOnClickListener(new View.OnClickListener() {
+        //generate layout params for action button
+        RelativeLayout.LayoutParams switch_button_params = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,RelativeLayout.LayoutParams.WRAP_CONTENT);
+        //move it to top right
+        switch_button_params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT,RelativeLayout.TRUE);
+        switch_button_params.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
+        //surfaceview params
+        RelativeLayout.LayoutParams surface_params = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT,RelativeLayout.LayoutParams.MATCH_PARENT);
+        //back button prams
+        RelativeLayout.LayoutParams back_button_params = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,RelativeLayout.LayoutParams.WRAP_CONTENT);
+        back_button_params.addRule(RelativeLayout.ALIGN_PARENT_TOP,RelativeLayout.TRUE);
+        back_button_params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
+        //generate user back button
+        FloatingActionButton back_button = new FloatingActionButton(this);
+        back_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 finish();
             }
         });
-        btBack.setImageResource(R.drawable.ic_arrow_back_24dp);
+        back_button.setImageResource(R.drawable.ic_arrow_back_24dp);
 
-
-        ((RelativeLayout) findViewById(R.id.camera_layout)).addView(sf, pr);
-        ((RelativeLayout)findViewById(R.id.camera_layout)).addView(bt, btD);
-        ((RelativeLayout)findViewById(R.id.camera_layout)).addView(btBack,btB);
+        //add views
+        ((RelativeLayout) findViewById(R.id.camera_layout)).addView(sf, surface_params);
+        ((RelativeLayout)findViewById(R.id.camera_layout)).addView(switch_button, switch_button_params);
+        ((RelativeLayout)findViewById(R.id.camera_layout)).addView(back_button,back_button_params);
+        //genrate camera trigger thread
         mThread = new CameraHandler();
+        //get surface holder
         sH = sf.getHolder();
         sH.setKeepScreenOn(true);
         sH.addCallback(new SurfaceHolder.Callback() {
             @Override
             public void surfaceCreated(SurfaceHolder holder) {
+                //set camera
                 mThread.cameraSet(isBack);
+                //lock and wait while locked
                 mThread.Lock = true;
                 while (mThread.isChanging()) {
 
@@ -114,7 +138,7 @@ public class CameraActivity extends AppCompatActivity {
                 try {
                     if (mCamera != null) {
 
-
+                        //start preview
                         mCamera.setPreviewDisplay(holder);
                         mCamera.startPreview();
                     } else {
@@ -133,24 +157,38 @@ public class CameraActivity extends AppCompatActivity {
 
             @Override
             public void surfaceDestroyed(SurfaceHolder holder) {
+                //unused
 
             }
         });
 
-        if(myMenu!=null){
-            MenuItem cam = myMenu.getItem(R.id.camera_change);
-            cam.setTitle("Camera Front");
+        File sd_card = Environment.getExternalStorageDirectory();
 
+        pic_dir = new File(sd_card.toString()+"/Tag");
+
+        try{
+            if(!pic_dir.exists()){
+                pic_dir.mkdirs();
+            }
         }
-
-
-
-
-
-
-
+        catch (SecurityException e){
+            Toast.makeText(CameraActivity.this,"Storage Creation Failed",Toast.LENGTH_LONG);
+            System.exit(1);
+        }
     }
 
+
+
+
+    public void  onPause(){
+        super.onPause();
+        if(mCamera!=null){
+            mCamera.release();
+        }
+        mCamera=null;
+    }
+
+    //returns camera id
     private int getCameraId(boolean isBack) {
         int cameraId = -1;
         int m;
@@ -173,7 +211,7 @@ public class CameraActivity extends AppCompatActivity {
         return cameraId;
     }
 
-
+    //sets correct orientation of camera
     public void setCameraDisplayOrientation() {
         Camera.Parameters parameters = mCamera.getParameters();
 
@@ -210,24 +248,7 @@ public class CameraActivity extends AppCompatActivity {
         mCamera.setDisplayOrientation(result);
     }
 
-
-    public void  onPause(){
-        super.onPause();
-        if(mCamera!=null){
-            mCamera.release();
-        }
-        mCamera=null;
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        myMenu = menu;
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.camera_menu, menu);
-
-        return true;
-    }
-
+    //make shutter sound
     Camera.ShutterCallback onShutter = new Camera.ShutterCallback() {
         @Override
         public void onShutter() {
@@ -244,38 +265,63 @@ public class CameraActivity extends AppCompatActivity {
     Camera.PictureCallback onPicTake = new Camera.PictureCallback() {
         @Override
         public void onPictureTaken(byte[] data, Camera camera) {
+            File new_image;
+            String file_name;
+            do {
+                int random_num = (int)(Math.random()*9000)+1000;
+                file_name =String.valueOf(random_num);
+                new_image = new File(pic_dir, current_user.first_name+"_"+file_name+".jpg");
+            }
+            while(new_image.exists());
 
-            ByteArrayOutputStream str = new ByteArrayOutputStream();
             try {
-                str.write(data);
+                FileOutputStream output_stream = new FileOutputStream(new_image);
+                output_stream.write(data);
+                output_stream.close();
+            }
+            catch (FileNotFoundException e){
+                Log.e("Pic Callback",e.toString());
             }
             catch(IOException e){
                 Log.e("Pic Callback",e.toString());
             }
-            String out = Base64.encodeToString(str.toByteArray(), Base64.DEFAULT).toString();
-            image_alert(out);
+
+            if(getIntent().getStringExtra("NeedResult")!=null){
+                Intent intent = new Intent();
+                intent.putExtra("uri",new_image.getAbsolutePath());
+                setResult(Activity.RESULT_OK, intent);
+                finish();
+            }
+            else {
+                add_pic_to_new_event(new_image.getAbsolutePath());
+            }
 
 
-            //mCamera.startPreview();
         }
     };
 
-    public void image_alert(final String out){
+    //ask user what to do with nw pic
+    private void add_pic_to_new_event(final String pic_file){
         DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 switch (which){
+                    //add to existing event
                     case DialogInterface.BUTTON_POSITIVE:
                         //Yes button clicked
                         break;
-
+                    //go create new event
                     case DialogInterface.BUTTON_NEGATIVE:
+                        //go call eventactivity
                         Intent toNewEvent = new Intent(CameraActivity.this,UserEventsActivity.class);
+                        //tell eventactivity to load create event
                         toNewEvent.putExtra("Create","1");
-                        Image.image = out;
+                        //pass user
                         toNewEvent.putExtra("User", current_user);
-                        startActivity(toNewEvent);
+                        //pass pic name
+                        toNewEvent.putExtra("image",pic_file);
 
+                        startActivity(toNewEvent);
 
                         //No button clicked
                         break;
@@ -300,8 +346,6 @@ public class CameraActivity extends AppCompatActivity {
 
         public void takePic(){
 
-
-
                 mCamera.autoFocus(new Camera.AutoFocusCallback() {
                     @Override
                     public void onAutoFocus(boolean success, Camera camera) {
@@ -309,11 +353,9 @@ public class CameraActivity extends AppCompatActivity {
                     }
                 });
 
-
-
-
         }
 
+        //get mutex value
         public synchronized boolean isChanging(){
             return Lock;
         }
@@ -331,7 +373,7 @@ public class CameraActivity extends AppCompatActivity {
                         if (isBack) {
 
                             mCamera = Camera.open(Camera.CameraInfo.CAMERA_FACING_BACK);
-                            Log.e("Opened", "opened");
+
 
 
                         } else {
@@ -355,37 +397,44 @@ public class CameraActivity extends AppCompatActivity {
 
 
     public void onSwitch(View v){
+        //if back camera is enabled
         if(isBack){
-
+            //switch to front
             isBack=false;
+            //change camera view
             mThread.Lock = true;
             mThread.cameraSet(isBack);
             while(mThread.isChanging()){
 
             }
             try{
+                //reload display and orientation
                 mCamera.setPreviewDisplay(sH);
                 mCamera.startPreview();
                 setCameraDisplayOrientation();
-                bt.setImageResource(R.drawable.ic_camera_rear_24dp);
+                //change button icon
+                switch_button.setImageResource(R.drawable.ic_camera_rear_24dp);
             }
             catch (IOException e){
                 Log.e("camera",e.toString());
             }
         }
+        //if we are in front view
         else{
-
+            //switch to back
             isBack=true;
+            //set camera display
             mThread.Lock = true;
             mThread.cameraSet(isBack);
             while(mThread.isChanging()){
 
             }
             try{
+                //set display
                 mCamera.setPreviewDisplay(sH);
                 mCamera.startPreview();
                 setCameraDisplayOrientation();
-                bt.setImageResource(R.drawable.ic_camera_front_24dp);
+                switch_button.setImageResource(R.drawable.ic_camera_front_24dp);
             }
             catch (IOException e){
                 Log.e("camera",e.toString());
@@ -395,15 +444,4 @@ public class CameraActivity extends AppCompatActivity {
 
     }
 
-
-    public boolean onOptionsItemSelected(MenuItem item) {
-
-        switch (item.getItemId()) {
-            case android.R.id.home:
-                finish();
-
-
-        }
-        return true;
-    }
 }

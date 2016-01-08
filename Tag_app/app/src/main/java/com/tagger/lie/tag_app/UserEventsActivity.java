@@ -43,9 +43,6 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.gms.appindexing.Action;
-import com.google.android.gms.appindexing.AppIndex;
-import com.google.android.gms.common.api.GoogleApiClient;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -66,21 +63,27 @@ public class UserEventsActivity extends ActionBarActivity {
     User current_user;
     ArrayList<View> children;
     ArrayList<View> parents;
-    int back = 1;
+    int back_mode = 0;
+    final int normal_back=0;
+    final int create_back=1;
+    final int camera_back=2;
+    boolean inCreateMode = false;
+    boolean inCameraMode = false;
+
     Menu myMenu;
-    String image;
+
     ImageView logo;
     ImageView initial;
+    String logo_image;
+    String initial_image;
+    int whichView;
+
     int did_submit  = 0;
 
     Dialog chosenDialog;
-    int whichPic;
 
-    /**
-     * ATTENTION: This was auto-generated to implement the App Indexing API.
-     * See https://g.co/AppIndexing/AndroidStudio for more information.
-     */
-    private GoogleApiClient client;
+
+
 
 
     private void key_dis(final EditText edit) {
@@ -108,19 +111,39 @@ public class UserEventsActivity extends ActionBarActivity {
         getWindow().requestFeature(Window.FEATURE_ACTION_BAR);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_user_events);
-        Intent fromUserPage = getIntent();
-        current_user = (User) fromUserPage.getExtras().get("User");
+        Intent intent = getIntent();
 
 
+        if(savedInstanceState!=null){
+            current_user=(User)savedInstanceState.get("User");
+            try{
+                if(savedInstanceState.getString("State").equals("Camera")){
+                    logo_image=savedInstanceState.getString("logo_image");
+                    initial_image=savedInstanceState.getString("initial_image");
+                    inCreateMode=false;
+                    inCameraMode=true;
+                    onEventCreate();
+                    return;
+                }
+            }
+            catch (NullPointerException e){
 
-
-        if (fromUserPage.getStringExtra("Create") != null) {
-
-            image = Image.image;
-
-            onEventCreate();
-            return;
+            }
         }
+
+        if(current_user==null){
+            current_user=(User)intent.getExtras().get("User");
+
+            if(intent.getStringExtra("Create")!=null){
+                logo_image=intent.getStringExtra("image");
+                inCreateMode=false;
+                inCameraMode=true;
+                onEventCreate();
+                return;
+            }
+
+        }
+
 
 
 
@@ -183,31 +206,49 @@ public class UserEventsActivity extends ActionBarActivity {
                 Log.e("Events", e.toString());
             }
         }
-        if(fromUserPage.getStringExtra("StayCreate")!=null){
-            onEventCreate();
-            return;
+        if(savedInstanceState!=null){
+
+            try{
+                if(savedInstanceState.getString("State").equals("Create")){
+                    logo_image=savedInstanceState.getString("logo_image");
+                    initial_image=savedInstanceState.getString("initial_image");
+                    inCreateMode=true;
+                    inCameraMode=false;
+                    onEventCreate();
+                }
+            }
+            catch (NullPointerException e){
+
+            }
+
         }
 
 
     }
 
+    public  void onSaveInstanceState(Bundle savedInstanceState){
 
-    public void onPause(){
-        super.onPause();
-        getIntent().removeExtra("User");
-        getIntent().putExtra("User",current_user);
-        try {
-            String event_create = getIntent().getStringExtra("Create");
-            getIntent().putExtra("Create",event_create);
-        }
-        catch(NullPointerException e){
 
+        savedInstanceState.putSerializable("User", current_user);
+
+        if(logo_image!=null){
+            savedInstanceState.putString("logo_image",logo_image);
         }
-        if(back==0){
-            getIntent().putExtra("StayCreate","1");
+
+        if(initial_image!=null){
+            savedInstanceState.putString("initial_image",initial_image);
         }
+
+        if(inCreateMode){
+            savedInstanceState.putString("State","Create");
+        }
+        if(inCameraMode){
+            savedInstanceState.putString("State", "Camera");
+        }
+
 
     }
+
 
     public void addToList(JSONArray events, LinearLayout ly) {
 
@@ -289,20 +330,29 @@ public class UserEventsActivity extends ActionBarActivity {
 
     protected  void onActivityResult(int requestCode, int resultCode,Intent data){
         Uri photoUri= data.getData();//.substring(data.getDataString().indexOf('/'),data.getDataString().length());
-        String photo = getRealPathFromURI(UserEventsActivity.this,photoUri);
+        String photo;
+        if(photoUri!=null){
+            photo= getRealPathFromURI(UserEventsActivity.this,photoUri);
+        }
+        else{
+            photo=data.getStringExtra("uri");
+        }
+
+
+
         try {
             FileInputStream str = new FileInputStream(new File(photo));
             Bitmap bitmap  = BitmapFactory.decodeStream(str);
 
 
-            if(whichPic == 1){
-                Image.bit1=bitmap;
+            if(whichView ==1){
+                logo_image=photo;
                 logo.setImageBitmap(bitmap);
                 chosenDialog.hide();
 
             }
-            else if(whichPic==2){
-                Image.bit2=bitmap;
+            else if(whichView==2){
+                initial_image=photo
                 initial.setImageBitmap(bitmap);
                 chosenDialog.hide();
 
@@ -376,7 +426,7 @@ public class UserEventsActivity extends ActionBarActivity {
 
 
     public void onEventCreate() {
-       Log.e("lol","lol");
+        Log.e("lol","lol");
         if(myMenu!=null){
             myMenu.findItem(R.id.event_create).setVisible(false);
 
@@ -669,7 +719,7 @@ public class UserEventsActivity extends ActionBarActivity {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.event_view_menu, menu);
         if(getIntent().getStringExtra("Create")!=null||getIntent().getStringExtra("StayCreate")!=null){
-                menu.findItem(R.id.event_create).setVisible(false);
+            menu.findItem(R.id.event_create).setVisible(false);
         }
 
 

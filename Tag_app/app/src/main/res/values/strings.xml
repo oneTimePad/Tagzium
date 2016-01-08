@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Tag_app</string>
+    <string name="app_name">Tagger</string>
     <string name="title_activity_user_page">UserPageActivity</string>
 
     <string name="navigation_drawer_open">Open navigation drawer</string>
