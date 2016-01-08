@@ -71,12 +71,14 @@ public class UserEventsActivity extends ActionBarActivity {
     boolean inCameraMode = false;
 
     Menu myMenu;
-
+    RelativeLayout main_layout;
     ImageView logo;
     ImageView initial;
     String logo_image;
     String initial_image;
-    int whichView;
+    int which_view;
+    final int select_logo=0;
+    final int select_initial=1;
 
     int did_submit  = 0;
 
@@ -135,7 +137,7 @@ public class UserEventsActivity extends ActionBarActivity {
             current_user=(User)intent.getExtras().get("User");
 
             if(intent.getStringExtra("Create")!=null){
-                logo_image=intent.getStringExtra("image");
+                initial_image=intent.getStringExtra("image");
                 inCreateMode=false;
                 inCameraMode=true;
                 onEventCreate();
@@ -144,7 +146,9 @@ public class UserEventsActivity extends ActionBarActivity {
 
         }
 
-
+        ActionBar ab = getSupportActionBar();
+        ab.setTitle(current_user.first_name + "\'s Events");
+        ab.setDisplayHomeAsUpEnabled(true);
 
 
         JSONArray events = null;
@@ -163,30 +167,29 @@ public class UserEventsActivity extends ActionBarActivity {
         }
 
 
-        ActionBar ab = getSupportActionBar();
-        ab.setTitle(current_user.first_name + "\'s Events");
-        ab.setDisplayHomeAsUpEnabled(true);
+
+        main_layout = ((RelativeLayout)findViewById(R.id.events));
 
         parents = new ArrayList<View>();
-        final SwipeRefreshLayout sw = new SwipeRefreshLayout(this);
-        parents.add(sw);
-        ((RelativeLayout) findViewById(R.id.events)).addView(sw);
-        ScrollView sc = new ScrollView(this);
-        sw.addView(sc, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        final LinearLayout ly = new LinearLayout(this);
-        ly.setOrientation(LinearLayout.VERTICAL);
-        sc.addView(ly, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-        sw.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+        final SwipeRefreshLayout refresh_layout = new SwipeRefreshLayout(this);
+        parents.add(refresh_layout);
+        main_layout.addView(refresh_layout);
+        ScrollView scroll = new ScrollView(this);
+        refresh_layout.addView(scroll, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        final LinearLayout linear_layout = new LinearLayout(this);
+        linear_layout.setOrientation(LinearLayout.VERTICAL);
+        scroll.addView(linear_layout, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        refresh_layout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
-                sw.setRefreshing(true);
+                refresh_layout.setRefreshing(true);
                 JSONArray events = getUserEvents();
                 if (events == null) {
-                    sw.setRefreshing(false);
+                    refresh_layout.setRefreshing(false);
                     return;
                 }
-                addToList(events, ly);
-                sw.setRefreshing(false);
+                onRefreshEvents(events, linear_layout);
+                refresh_layout.setRefreshing(false);
 
 
             }
@@ -198,10 +201,10 @@ public class UserEventsActivity extends ActionBarActivity {
         }
         for (int i = 0; i < events.length(); i++) {
             try {
-                JSONObject js = events.getJSONObject(i);
+                JSONObject events_ser = events.getJSONObject(i);
                 TextView evV = new TextView(this);
-                evV.setText(js.get("event_name").toString());
-                ly.addView(evV);
+                evV.setText(events_ser.get("event_name").toString());
+                linear_layout.addView(evV);
             } catch (JSONException e) {
                 Log.e("Events", e.toString());
             }
@@ -249,25 +252,65 @@ public class UserEventsActivity extends ActionBarActivity {
 
     }
 
+    protected  void onActivityResult(int requestCode, int resultCode,Intent data){
+        Uri photoUri= data.getData();//.substring(data.getDataString().indexOf('/'),data.getDataString().length());
+        String photo;
+        if(photoUri!=null){
+            photo= getRealPathFromURI(UserEventsActivity.this,photoUri);
+        }
+        else{
+            photo=data.getStringExtra("uri");
+        }
 
-    public void addToList(JSONArray events, LinearLayout ly) {
+
+
+        try {
+            FileInputStream str = new FileInputStream(new File(photo));
+            Bitmap bitmap  = BitmapFactory.decodeStream(str);
+
+
+            if(which_view ==select_logo){
+                logo_image=photo;
+                logo.setImageBitmap(bitmap);
+                chosenDialog.hide();
+
+            }
+            else if(which_view==select_initial){
+                initial_image=photo;
+                initial.setImageBitmap(bitmap);
+                chosenDialog.hide();
+
+            }
+        }
+        catch(FileNotFoundException e){
+            Log.e("onAct",e.toString());
+        }
+
+
+
+
+
+    }
+
+
+    private void onRefreshEvents(JSONArray events, LinearLayout linear_layout) {
 
         if (current_user.events == null) {
             current_user.events = events.toString();
             return;
         }
         try {
-            JSONArray js = new JSONArray(current_user.events);
+            JSONArray events_ser = new JSONArray(current_user.events);
             for (int i = 0; i < events.length(); i++) {
 
-                js.put(events.getJSONObject(i));
+                events_ser.put(events.getJSONObject(i));
                 TextView evV = new TextView(this);
                 evV.setText(events.getJSONObject(i).get("event_name").toString());
-                ly.addView(evV, 0);
+                linear_layout.addView(evV, 0);
 
 
             }
-            current_user.events = js.toString();
+            current_user.events = events_ser.toString();
         } catch (JSONException e) {
             Log.e("Events", e.toString());
         }
@@ -276,7 +319,7 @@ public class UserEventsActivity extends ActionBarActivity {
     }
 
 
-    public JSONArray getUserEvents() {
+    private JSONArray getUserEvents() {
 
 
         APICall getEvents = new APICall(getApplicationContext(), "POST", "/events/retrieve_users/", new JSONObject());
@@ -310,7 +353,7 @@ public class UserEventsActivity extends ActionBarActivity {
 
 
 
-    public String getRealPathFromURI(Context context, Uri contentUri) {
+    private String getRealPathFromURI(Context context, Uri contentUri) {
         Cursor cursor = null;
         try {
             String[] proj = { MediaStore.Images.Media.DATA };
@@ -328,45 +371,7 @@ public class UserEventsActivity extends ActionBarActivity {
 
 
 
-    protected  void onActivityResult(int requestCode, int resultCode,Intent data){
-        Uri photoUri= data.getData();//.substring(data.getDataString().indexOf('/'),data.getDataString().length());
-        String photo;
-        if(photoUri!=null){
-            photo= getRealPathFromURI(UserEventsActivity.this,photoUri);
-        }
-        else{
-            photo=data.getStringExtra("uri");
-        }
 
-
-
-        try {
-            FileInputStream str = new FileInputStream(new File(photo));
-            Bitmap bitmap  = BitmapFactory.decodeStream(str);
-
-
-            if(whichView ==1){
-                logo_image=photo;
-                logo.setImageBitmap(bitmap);
-                chosenDialog.hide();
-
-            }
-            else if(whichView==2){
-                initial_image=photo
-                initial.setImageBitmap(bitmap);
-                chosenDialog.hide();
-
-            }
-        }
-        catch(FileNotFoundException e){
-            Log.e("onAct",e.toString());
-        }
-
-
-
-
-
-    }
 
 
     private Dialog imageSourceSelect(final int code){
@@ -391,7 +396,7 @@ public class UserEventsActivity extends ActionBarActivity {
             @Override
             public void onClick(View v) {
                 camIntent.putExtra("User",current_user);
-
+                camIntent.putExtra("NeedResult","NeedResult");
                 startActivityForResult(camIntent, code);
             }
         });
@@ -426,7 +431,6 @@ public class UserEventsActivity extends ActionBarActivity {
 
 
     public void onEventCreate() {
-        Log.e("lol","lol");
         if(myMenu!=null){
             myMenu.findItem(R.id.event_create).setVisible(false);
 
@@ -436,10 +440,13 @@ public class UserEventsActivity extends ActionBarActivity {
         ab.setDisplayHomeAsUpEnabled(true);
 
 
-        back = 0;
-        if (image != null) {
-            back = 2;
+        if(inCreateMode){
+            back_mode=create_back;
         }
+        else if(inCameraMode){
+            back_mode=camera_back;
+        }
+
         if (parents != null) {
             for (View v : parents) {
                 v.setVisibility(View.GONE);
@@ -475,11 +482,25 @@ public class UserEventsActivity extends ActionBarActivity {
         children.add(logo);
         children.add(initial);
 
-        if(Image.bit1!=null){
-            logo.setImageBitmap(Image.bit1);
+        if(logo_image!=null){
+            try {
+                FileInputStream str = new FileInputStream(new File(logo_image));
+                Bitmap bitmap = BitmapFactory.decodeStream(str);
+                logo.setImageBitmap(bitmap);
+            }
+            catch (FileNotFoundException e){
+
+            }
         }
-        if(Image.bit2!=null){
-            initial.setImageBitmap(Image.bit2);
+        if(initial_image!=null){
+            try {
+                FileInputStream str = new FileInputStream(new File(initial_image));
+                Bitmap bitmap = BitmapFactory.decodeStream(str);
+                initial.setImageBitmap(bitmap);
+            }
+            catch (FileNotFoundException e){
+
+            }
         }
 
         logo.setOnClickListener(new View.OnClickListener() {
@@ -524,7 +545,7 @@ public class UserEventsActivity extends ActionBarActivity {
         selectLogo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                whichPic=1;
+                which_view=select_logo;
                 Dialog di =imageSourceSelect(1);
                 chosenDialog =di;
                 di.show();
@@ -535,7 +556,7 @@ public class UserEventsActivity extends ActionBarActivity {
         selectInitalImage.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                whichPic=2;
+                which_view=select_initial;
                 Dialog di= imageSourceSelect(1);
                 chosenDialog =di;
                 di.show();
@@ -547,28 +568,23 @@ public class UserEventsActivity extends ActionBarActivity {
         RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
 
 
-        ((RelativeLayout) findViewById(R.id.events)).addView(event_name, params_o);
+        main_layout.addView(event_name, params_o);
         params.addRule(RelativeLayout.BELOW, event_name.getId());
-        ((RelativeLayout) findViewById(R.id.events)).addView(selectLogo, params);
+        main_layout.addView(selectLogo, params);
         RelativeLayout.LayoutParams params_L = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
         params_L.addRule(RelativeLayout.BELOW, selectLogo.getId());
-        ((RelativeLayout) findViewById(R.id.events)).addView(selectInitalImage, params_L);
+        main_layout.addView(selectInitalImage, params_L);
 
 
-        if(image!=null){
-            byte[] decodedString = Base64.decode(image, Base64.NO_WRAP);
-            InputStream inputStream  = new ByteArrayInputStream(decodedString);
-            Bitmap bitmap  = BitmapFactory.decodeStream(inputStream);
-            initial.setImageBitmap(bitmap);
-        }
-        ((RelativeLayout)findViewById(R.id.events)).addView(logo,params_logo);
-        ((RelativeLayout)findViewById(R.id.events)).addView(initial,params_initial);
+
+        main_layout.addView(logo, params_logo);
+        main_layout.addView(initial, params_initial);
 
 
         RelativeLayout.LayoutParams params_p = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         params_p.addRule(RelativeLayout.BELOW, selectInitalImage.getId());
         params_p.addRule(RelativeLayout.CENTER_HORIZONTAL);
-        ((RelativeLayout) findViewById(R.id.events)).addView(submit, params_p);
+        main_layout.addView(submit, params_p);
         submit.setText("Submit Event");
         submit.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
@@ -613,98 +629,103 @@ public class UserEventsActivity extends ActionBarActivity {
         });
     }
 
+    private void onHome(){
+        if (back_mode == normal_back) {
+            Intent back = new Intent(UserEventsActivity.this, UserPageActivity.class);
+            back.putExtra("user", current_user);
+
+            startActivity(back);
+            finish();
+        } else if (back_mode == camera_back) {
+            if (did_submit == 0) {
+                DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        switch (which) {
+                            case DialogInterface.BUTTON_POSITIVE:
+                                finish();
+                                break;
+
+                            case DialogInterface.BUTTON_NEGATIVE:
+                                //No button clicked
+                                break;
+                        }
+                    }
+                };
+                AlertDialog.Builder builder = new AlertDialog.Builder(UserEventsActivity.this);
+                builder.setMessage("Leave Event Creation?").setPositiveButton("Yes", dialogClickListener)
+                        .setNegativeButton("No", dialogClickListener).show();
+
+            }
+            else {
+                Image.image = null;
+                finish();
+            }
+        } else if (back_mode == create_back) {
+
+
+            if(did_submit==0) {
+                DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        switch (which) {
+                            case DialogInterface.BUTTON_POSITIVE:
+                                if (parents != null) {
+                                    for (View v : parents) {
+                                        v.setVisibility(View.VISIBLE);
+                                    }
+                                }
+                                for (View v : children) {
+                                    v.setVisibility(View.GONE);
+                                }
+                                back_mode = normal_back;
+
+                                if (getIntent().getStringExtra("StayCreate") != null) {
+                                    getIntent().removeExtra("StayCreate");
+                                }
+                                ActionBar ab = getSupportActionBar();
+                                ab.setTitle(current_user.first_name + "\'s Events");
+                                if (myMenu != null) {
+                                    myMenu.findItem(R.id.event_create).setVisible(true);
+                                }
+                                logo_image = null;
+                                initial_image = null;
+
+                                break;
+
+                            case DialogInterface.BUTTON_NEGATIVE:
+                                //No button clicked
+                                break;
+                        }
+                    }
+                };
+                AlertDialog.Builder builder = new AlertDialog.Builder(UserEventsActivity.this);
+                builder.setMessage("Leave Event Creation?").setPositiveButton("Yes", dialogClickListener)
+                        .setNegativeButton("No", dialogClickListener).show();
+
+            }
+
+        }
+
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode,KeyEvent event){
+        switch (keyCode){
+            case KeyEvent.KEYCODE_BACK:
+                onHome();
+                return true;
+            default:
+                super.onKeyDown(keyCode,event);
+        }
+        return true;
+    }
+
     public boolean onOptionsItemSelected(MenuItem item) {
 
         switch (item.getItemId()) {
             case android.R.id.home:
-
-                if (back == 1) {
-                    Image.image = null;
-                    Image.bit1=null;
-                    Image.bit2=null;
-                    Intent back = new Intent(UserEventsActivity.this, UserPageActivity.class);
-                    back.putExtra("user", current_user);
-
-                    startActivity(back);
-                    finish();
-                } else if (back == 2) {
-                    if (did_submit == 0) {
-                        DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                switch (which) {
-                                    case DialogInterface.BUTTON_POSITIVE:
-                                        //Yes button clicked
-                                        Image.image = null;
-                                        Image.bit1=null;
-                                        Image.bit2=null;
-                                        finish();
-                                        break;
-
-                                    case DialogInterface.BUTTON_NEGATIVE:
-                                        //No button clicked
-                                        break;
-                                }
-                            }
-                        };
-                        AlertDialog.Builder builder = new AlertDialog.Builder(UserEventsActivity.this);
-                        builder.setMessage("Leave Event Creation?").setPositiveButton("Yes", dialogClickListener)
-                                .setNegativeButton("No", dialogClickListener).show();
-
-                    }
-                    else {
-                        Image.image = null;
-                        finish();
-                    }
-                } else if (back == 0) {
-
-
-                    if(did_submit==0){
-                        DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                switch (which) {
-                                    case DialogInterface.BUTTON_POSITIVE:
-                                        //Yes button clicked
-                                        Image.image = null;
-                                        Image.bit1=null;
-                                        Image.bit2=null;
-                                        if (parents != null) {
-                                            for (View v : parents) {
-                                                v.setVisibility(View.VISIBLE);
-                                            }
-                                        }
-                                        for (View v : children) {
-                                            v.setVisibility(View.GONE);
-                                        }
-                                        back = 1;
-
-                                        if(getIntent().getStringExtra("StayCreate")!=null){
-                                            getIntent().removeExtra("StayCreate");
-                                        }
-                                        ActionBar ab = getSupportActionBar();
-                                        ab.setTitle(current_user.first_name + "\'s Events");
-                                        if(myMenu!=null) {
-                                            myMenu.findItem(R.id.event_create).setVisible(true);
-                                        }
-
-                                        break;
-
-                                    case DialogInterface.BUTTON_NEGATIVE:
-                                        //No button clicked
-                                        break;
-                                }
-                            }
-                        };
-                        AlertDialog.Builder builder = new AlertDialog.Builder(UserEventsActivity.this);
-                        builder.setMessage("Leave Event Creation?").setPositiveButton("Yes", dialogClickListener)
-                                .setNegativeButton("No", dialogClickListener).show();
-
-                    }
-                    return true;
-
-
-                }
+                onHome();
                 break;
             case R.id.event_create:
                 onEventCreate();
