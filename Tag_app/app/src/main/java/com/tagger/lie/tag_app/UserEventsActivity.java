@@ -114,6 +114,7 @@ public class UserEventsActivity extends ActionBarActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_user_events);
         Intent intent = getIntent();
+        main_layout = ((RelativeLayout)findViewById(R.id.events));
 
 
         if(savedInstanceState!=null){
@@ -168,7 +169,7 @@ public class UserEventsActivity extends ActionBarActivity {
 
 
 
-        main_layout = ((RelativeLayout)findViewById(R.id.events));
+
 
         parents = new ArrayList<View>();
         final SwipeRefreshLayout refresh_layout = new SwipeRefreshLayout(this);
@@ -658,12 +659,13 @@ public class UserEventsActivity extends ActionBarActivity {
 
             }
             else {
-                Image.image = null;
+
                 finish();
             }
         } else if (back_mode == create_back) {
 
-
+            inCreateMode=false;
+            inCameraMode=false;
             if(did_submit==0) {
                 DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
                     @Override
@@ -728,6 +730,8 @@ public class UserEventsActivity extends ActionBarActivity {
                 onHome();
                 break;
             case R.id.event_create:
+                inCreateMode=true;
+                inCameraMode=false;
                 onEventCreate();
                 break;
         }
