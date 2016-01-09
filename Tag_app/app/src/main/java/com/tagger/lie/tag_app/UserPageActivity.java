@@ -4,7 +4,9 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.ActionBarActivity;
@@ -29,6 +31,7 @@ public class UserPageActivity extends ActionBarActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
     User current_user;
+    SharedPreferences shared;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,6 +70,15 @@ public class UserPageActivity extends ActionBarActivity
 
 
             current_user = new User((String)user_json.get("username"),(String)user_json.get("email"),(String)user_json.get("first_name"),token);
+            shared = this.getSharedPreferences("user_pref",MODE_WORLD_READABLE);
+            shared.edit().clear();
+            shared.edit().apply();
+
+
+
+            shared.edit().putString("LastUser", current_user.username).commit();
+            shared.edit().putString("Token",current_user.curr_token).commit();
+
 
         }
         catch (JSONException e){
@@ -78,7 +90,10 @@ public class UserPageActivity extends ActionBarActivity
 
 
     public void onNewIntent(Intent newI){
-        current_user = (User)newI.getExtras().get("user");
+        User new_user = (User)newI.getExtras().get("user");
+        if(new_user!=null){
+            current_user=new_user;
+        }
 
 
     }
@@ -96,6 +111,7 @@ public class UserPageActivity extends ActionBarActivity
                 switch (which){
                     case DialogInterface.BUTTON_POSITIVE:
                         //Yes button clicked
+
                         logout();
 
                         break;
@@ -132,6 +148,8 @@ public class UserPageActivity extends ActionBarActivity
 
 
     public void logout(){
+        shared.edit().remove("LastUser").commit();
+        shared.edit().remove("Token").commit();
         APICall logout = new APICall(getApplicationContext(),"POST","/users/logout/",new JSONObject());
         logout.authenticate(current_user.curr_token);
         try {

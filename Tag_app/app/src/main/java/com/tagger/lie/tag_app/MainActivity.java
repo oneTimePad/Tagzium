@@ -2,6 +2,7 @@ package com.tagger.lie.tag_app;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.HandlerThread;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -9,10 +10,12 @@ import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Toast;
 
 import org.apache.commons.io.IOUtils;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -23,6 +26,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Serializable;
+import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -35,6 +39,56 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+
+        SharedPreferences pref= this.getSharedPreferences("user_pref", MODE_WORLD_READABLE);
+        String username = pref.getString("LastUser", null);
+        String token = pref.getString("Token",null);
+
+        if(username==null){
+            return;
+        }
+
+
+
+        JSONObject request = new JSONObject();
+        try {
+            request.put("username", username);
+        }
+        catch (JSONException e){
+            Log.e("Main",e.toString());
+        }
+        APICall call = new APICall(MainActivity.this,"POST","/users/maintain_session/",request);
+        call.authenticate(token);
+
+        try{
+            call.connect();
+        }
+        catch (ConnectException e){
+
+        }
+
+        switch(call.getStatus()){
+            case 200:
+                JSONArray response = call.getResponse();
+                Intent toUserPage = new Intent(MainActivity.this,UserPageActivity.class);
+                try {
+                    toUserPage.putExtra("response", response.getJSONObject(0).toString());
+                }
+                catch (JSONException e){
+                    Log.e("Main",e.toString());
+                }
+
+                startActivity(toUserPage);
+                break;
+            case 401:
+            case 400:
+                Toast.makeText(MainActivity.this, "Session Expired",Toast.LENGTH_SHORT).show();
+                Intent toAct = new Intent(MainActivity.this,LogSignActivity.class);
+                toAct.putExtra("layout", "login");
+                startActivity(toAct);
+                break;
+        }
     }
 
 

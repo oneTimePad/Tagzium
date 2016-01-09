@@ -47,6 +47,7 @@ def create_auth_token(sender, instance=None, created=False, **kwargs):
 class ExpiringTokenAuthentication(TokenAuthentication):
     def has_permission(self, request,view):
 
+
         key = request.auth
         try:
             token = self.model.objects.get(key=key)
@@ -60,7 +61,8 @@ class ExpiringTokenAuthentication(TokenAuthentication):
         utc_now = datetime.utcnow()
         utc_now = utc_now.replace(tzinfo=pytz.utc)
 
-        if token.created < utc_now - timedelta(hours=24):
+        if timedelta(hours=1) < utc_now - token.created:
+
             token.delete()
             raise exceptions.AuthenticationFailed('Token has expired')
 
@@ -114,6 +116,14 @@ class UserViewSet(viewsets.ModelViewSet):
             user.first_name=data['new_name']
             user.save()
             return Response({'Status':'Success'})
+        @list_route(methods=['post'])
+        def maintain_session(self,request,pk=None):
+
+            User = get_user_model()
+            user =User.objects.get(username=request.data['username'])
+            user_ser = ProfileSerializer(user)
+            cache.set("return_all",1)
+            return Response({'user':user_ser.data,'token':request.auth.key})
 
 
 @receiver(post_save,sender=Event)
