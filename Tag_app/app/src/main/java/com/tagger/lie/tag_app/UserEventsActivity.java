@@ -12,7 +12,9 @@ import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Parcelable;
 import android.provider.MediaStore;
@@ -24,6 +26,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Base64;
 import android.util.Log;
+import android.view.Display;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -31,10 +35,13 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AbsListView;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.GridView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -49,9 +56,11 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Array;
 import java.net.ConnectException;
@@ -254,6 +263,9 @@ public class UserEventsActivity extends ActionBarActivity {
     }
 
     protected  void onActivityResult(int requestCode, int resultCode,Intent data){
+        if(data==null){
+            return;
+        }
         Uri photoUri= data.getData();//.substring(data.getDataString().indexOf('/'),data.getDataString().length());
         String photo;
         if(photoUri!=null){
@@ -377,31 +389,47 @@ public class UserEventsActivity extends ActionBarActivity {
 
     private Dialog imageSourceSelect(final int code){
         final Dialog choosePicContent = new Dialog(UserEventsActivity.this);
-        ScrollView scrollContent = new ScrollView(UserEventsActivity.this);
-        choosePicContent.addContentView(scrollContent, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        LinearLayout scrollLayout = new LinearLayout(UserEventsActivity.this);
-        scrollContent.addView(scrollLayout);
-        scrollLayout.setOrientation(LinearLayout.VERTICAL);
+        WindowManager.LayoutParams wmlp = choosePicContent.getWindow().getAttributes();
+        wmlp.gravity = Gravity.BOTTOM;
+        Display display = getWindowManager().getDefaultDisplay();
+        int screenWidth = display.getWidth();
+
+        wmlp.width=screenWidth;
+        //wmlp.x = 100;   //x position
+        //wmlp.y = 1000;   //y position
+
+
 
         TextView title = new TextView(UserEventsActivity.this);
         title.setText(R.string.selectsource);
-        scrollLayout.addView(title);
+        title.setId(new Integer(1));
+        title.setGravity(Gravity.TOP);
+        title.setTextSize(15);
+        title.setTextColor(Color.BLACK);
+        RelativeLayout layout = new RelativeLayout(UserEventsActivity.this);
+        RelativeLayout.LayoutParams textLayout =  new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+        textLayout.addRule(RelativeLayout.CENTER_HORIZONTAL,RelativeLayout.TRUE);
+        textLayout.addRule(RelativeLayout.ALIGN_PARENT_TOP,RelativeLayout.TRUE);
+
+        layout.addView(title,textLayout );
+
+
         Intent gallIntent = new Intent(Intent.ACTION_GET_CONTENT);
         gallIntent.setType("image/*");
 
-        final Intent camIntent = new Intent(UserEventsActivity.this,CameraActivity.class);
 
-        ImageButton camButton = new ImageButton(UserEventsActivity.this);
-        camButton.setImageDrawable(getApplicationContext().getDrawable(R.drawable.ic_menu_camera));
-        camButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                camIntent.putExtra("User",current_user);
-                camIntent.putExtra("NeedResult","NeedResult");
-                startActivityForResult(camIntent, code);
-            }
-        });
-        scrollLayout.addView(camButton);
+        final Intent camIntent = new Intent(UserEventsActivity.this,CameraActivity.class);
+        camIntent.putExtra("User",current_user);
+        camIntent.putExtra("NeedResult","NeedResult");
+
+        final ArrayList<Intent> intents = new ArrayList<>();
+        ArrayList<String> names = new ArrayList<>();
+        ArrayList<Drawable> images = new ArrayList<>();
+
+
+        intents.add(camIntent);
+        names.add("Camera");
+        images.add(getApplicationContext().getDrawable(R.drawable.ic_menu_camera));
 
         List<ResolveInfo> listGall = getApplicationContext().getPackageManager().queryIntentActivities(gallIntent, 0);
         for (ResolveInfo res : listGall) {
@@ -409,21 +437,34 @@ public class UserEventsActivity extends ActionBarActivity {
 
             final Intent finalIntent = new Intent(gallIntent);
             finalIntent.setComponent(new ComponentName(res.activityInfo.packageName, res.activityInfo.name));
+            String packageName =(String)res.activityInfo.loadLabel(getPackageManager());
+            //String appname = packageName.substring(packageName.lastIndexOf('.')+1,packageName.length());
 
-            ImageButton iconButton = new ImageButton(UserEventsActivity.this);
-
-            iconButton.setImageDrawable(res.activityInfo.loadIcon(getPackageManager()));
-            iconButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-
-                    startActivityForResult(finalIntent,code);
-                }
-            });
-            scrollLayout.addView(iconButton);
+            intents.add(finalIntent);
+            names.add(packageName);
+            images.add(res.activityInfo.loadIcon(getPackageManager()));
 
         }
 
+        GridView grid = new GridView(UserEventsActivity.this);
+
+        IntentAdapter adapt = new IntentAdapter(UserEventsActivity.this,names,images);
+        grid.setAdapter(adapt);
+        grid.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                Intent intent = intents.get(position);
+                startActivityForResult(intent, 1);
+
+                return false;
+            }
+        });
+                grid.setNumColumns(3);
+
+        RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.addRule(RelativeLayout.BELOW,title.getId());
+        layout.addView(grid, params);
+        choosePicContent.addContentView(layout,new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.FILL_PARENT,RelativeLayout.LayoutParams.FILL_PARENT));
         return choosePicContent;
 
     }
@@ -599,8 +640,53 @@ public class UserEventsActivity extends ActionBarActivity {
                     JSONObject request = new JSONObject();
                     request.put("event_name", en);
 
+                    String logo_str=null;
+                    String initial_str=null;
+                    try {
+                        File imageL = new File(logo_image);
+                        FileInputStream fin = new FileInputStream(imageL);
+                        DataInputStream dis = new DataInputStream(fin);
+                        byte fileContent[] = new byte[(int) imageL.length()];
+                        dis.readFully(fileContent);
+                        logo_str=Base64.encodeToString(fileContent, Base64.DEFAULT);
+                    }
+                    catch (NullPointerException e){
+
+                    }
+                    catch (FileNotFoundException e){
+                        Log.e("Events",e.toString());
+                    }
+                    catch (IOException e){
+                        Log.e("Events",e.toString());
+                    }
+
+                    try {
+                        File imageL = new File(initial_image);
+                        FileInputStream fin = new FileInputStream(imageL);
+                        DataInputStream dis = new DataInputStream(fin);
+                        byte fileContent[] = new byte[(int) imageL.length()];
+                        dis.readFully(fileContent);
+                        initial_str=Base64.encodeToString(fileContent, Base64.DEFAULT);
+                    }
+                    catch (NullPointerException e){
+
+                    }
+                    catch (FileNotFoundException e){
+                        Log.e("Events",e.toString());
+                    }
+                    catch (IOException e){
+                        Log.e("Events",e.toString());
+                    }
+
+                    if(logo_str!=null){
+                        request.put("logo_image",logo_str);
+                    }
+                    if(initial_str!=null){
+                        request.put("initial_image",initial_str);
+                    }
+
+
                     APICall eC = new APICall(getApplicationContext(), "POST", "/events/creates/", request);
-                    eC.authenticate(current_user.curr_token);
                     eC.authenticate(current_user.curr_token);
                     try {
                         eC.connect();

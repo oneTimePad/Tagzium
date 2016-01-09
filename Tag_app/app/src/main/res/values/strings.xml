@@ -11,6 +11,6 @@
 
 
 
-        <string name="selectsource"><u><b>Select Source</b></u></string>
+        <string name="selectsource"><b>Select Source</b></string>
 
 </resources>

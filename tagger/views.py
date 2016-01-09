@@ -151,6 +151,13 @@ class EventViewSet(viewsets.ModelViewSet):
 
         input = {'event_name':request.data['event_name'],'creator':request.user.pk}
         event=EventSerializer(data=input)
+        image = PictureSerializer(data={'photo':request.data['initial_image']})
+        if image.is_valid() and image.valid():
+            image.event=event
+            image.save()
+        else:
+            return Response("Invalid File",status=status.HTTP_400_BAD_REQUEST)
+
         if not event.is_valid():
             return Response(event.errors,status=status.HTTP_400_BAD_REQUEST)
         event = event.create()
