@@ -46,11 +46,57 @@ public class UserPageActivity extends ActionBarActivity
 
     User current_user;
     SharedPreferences shared;
-    int log_count = 0;
+
     String token=null;
     Long expiration=null;
 
 
+    private class success_get_user implements ReloginBox.Callback{
+
+       public void success(ArrayList<Object> args,String token,Long expiration){
+          APICall call = new APICall(UserPageActivity.this, "POST", "/users/get_user/", new JSONObject());
+           call.authenticate(token, expiration);
+
+
+           try {
+               call.connect();
+               switch (call.getStatus()) {
+                   case 401:
+                       Toast.makeText(UserPageActivity.this, "Error restoring session", Toast.LENGTH_SHORT).show();
+                       logout();
+               }
+               Toast.makeText(UserPageActivity.this, "Session Restored", Toast.LENGTH_SHORT).show();
+
+
+               JSONArray response = call.getResponse();
+               current_user = new User(
+                       response.getJSONObject(0).getString("username"),
+                       response.getJSONObject(0).getString("email"),
+                       response.getJSONObject(0).getString("first_name"),
+                       token,
+                       expiration
+
+               );
+               shared.edit().clear();
+               shared.edit().apply();
+               shared.edit().putString("LastUser", current_user.username).commit();
+               shared.edit().putString("Token", current_user.curr_token).commit();
+               onResume();
+           }
+           catch (ConnectException e){
+
+           }
+           catch(JSONException e){
+               Log.e("Page",e.toString());
+           }
+
+
+
+        }
+        public void failure(ArrayList<Object>args ,String token,Long expiration){
+            logout();
+        }
+    }
 
 
 
@@ -85,17 +131,13 @@ public class UserPageActivity extends ActionBarActivity
         try {
 
 
+            shared = this.getSharedPreferences("user_pref", MODE_WORLD_READABLE);
+            if ((fromLogSign.getExtras().getString("response").equals("start"))) {
+                token = shared.getString("Token", null);
+                expiration = shared.getLong("Expiration", 0);
 
 
-            shared = this.getSharedPreferences("user_pref",MODE_WORLD_READABLE);
-            if((fromLogSign.getExtras().getString("response").equals("start"))){
-                token = shared.getString("Token",null);
-                expiration = shared.getLong("Expiration",0);
-
-
-
-            }
-            else {
+            } else {
 
                 JSONObject token_info = new JSONObject((String) fromLogSign.getExtras().get("response"));
 
@@ -105,185 +147,48 @@ public class UserPageActivity extends ActionBarActivity
 
                 String token_decode = new String(Base64.decode(token_split[1].getBytes(), Base64.DEFAULT), "UTF-8");
                 JSONObject payload = new JSONObject(token_decode);
-                expiration=Long.parseLong(payload.getString("exp"));
+                expiration = Long.parseLong(payload.getString("exp"));
             }
 
-                APICall call = new APICall(UserPageActivity.this, "POST", "/users/get_user/", new JSONObject());
-                call.authenticate(token, expiration);
+            APICall call = new APICall(UserPageActivity.this, "POST", "/users/get_user/", new JSONObject());
+            //call.authenticate(token, expiration);
 
-                call.connect();
-                switch (call.getStatus()) {
+            call.connect();
+            switch (call.getStatus()) {
 
-                    case 200:
-                        JSONArray response = call.getResponse();
-                        current_user = new User(
-                                response.getJSONObject(0).getString("username"),
-                                response.getJSONObject(0).getString("email"),
-                                response.getJSONObject(0).getString("first_name"),
-                                token,
-                                expiration
+                case 200:
+                    JSONArray response = call.getResponse();
+                    current_user = new User(
+                            response.getJSONObject(0).getString("username"),
+                            response.getJSONObject(0).getString("email"),
+                            response.getJSONObject(0).getString("first_name"),
+                            token,
+                            expiration
 
-                        );
-                        shared.edit().clear();
-                        shared.edit().apply();
-                        shared.edit().putString("LastUser", current_user.username).commit();
-                        shared.edit().putString("Token", current_user.curr_token).commit();
-                        shared.edit().putLong("Expiration",current_user.expiration_date).commit();
-                        break;
-                    case 401:
-
-                        Toast.makeText(UserPageActivity.this,"Session Expired",Toast.LENGTH_SHORT).show();
-                        final Dialog relogin = new Dialog(UserPageActivity.this);
-                        relogin.setCancelable(false);
-                        relogin.setTitle("Please Login");
-                        final EditText username = new EditText(UserPageActivity.this);
-                        final EditText password = new EditText(UserPageActivity.this);
-                        username.setHint("username");
-                        password.setHint("password");
-                        username.setId(new Integer(1));
-                        password.setId(new Integer(2));
-                        Button submit = new Button(UserPageActivity.this);
-                        submit.setText("Login");
-                        final ArrayList<View> parents = new ArrayList<>();
-                        parents.add(username);
-                        parents.add(password);
-                        parents.add(submit);
-
-                        final ProgressBar prog = new ProgressBar(UserPageActivity.this);
-                        RelativeLayout.LayoutParams progparams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                        progparams.addRule(RelativeLayout.CENTER_HORIZONTAL,RelativeLayout.TRUE);
-                        prog.setVisibility(View.GONE);
+                    );
+                    shared.edit().clear();
+                    shared.edit().apply();
+                    shared.edit().putString("LastUser", current_user.username).commit();
+                    shared.edit().putString("Token", current_user.curr_token).commit();
+                    shared.edit().putLong("Expiration", current_user.expiration_date).commit();
+                    break;
+                case 401:
+                    ReloginBox box = new ReloginBox(UserPageActivity.this);
+                    box.show(new ArrayList<Object>(),new success_get_user());
 
 
-
-                        submit.setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                                for (View view : parents) {
-                                    view.setVisibility(View.GONE);
-                                }
-                                prog.setVisibility(View.VISIBLE);
-                                JSONObject request = new JSONObject();
-                                try {
-                                    if (!(username.getText().equals(""))) {
-                                        request.put("username", username.getText());
-                                        if (!(password.getText().equals(""))) {
-                                            request.put("password", password.getText());
-
-                                            APICall call = new APICall(UserPageActivity.this, "POST", "/auth/login", request);
-                                            call.connect();
-
-
-                                            switch (call.getStatus()) {
-                                                case 200:
-
-                                                    JSONArray response = call.getResponse();
-                                                    String token_string = response.getJSONObject(0).getString("token");
-                                                    String[] token_split = token_string.split("\\.");
-
-                                                    String token_decode = new String(Base64.decode(token_split[1].getBytes(), Base64.DEFAULT), "UTF-8");
-                                                    JSONObject payload = new JSONObject(token_decode);
-
-                                                    token = token_string;
-                                                    expiration = Long.parseLong(payload.getString("exp"));
-                                                    call = new APICall(UserPageActivity.this, "POST", "/users/get_user/", new JSONObject());
-                                                    call.authenticate(token, expiration);
-                                                    call.connect();
-                                                    switch (call.getStatus()) {
-                                                        case 401:
-                                                            Toast.makeText(UserPageActivity.this, "Error restoring session", Toast.LENGTH_SHORT).show();
-                                                            logout();
-                                                    }
-                                                    Toast.makeText(UserPageActivity.this, "Session Restored", Toast.LENGTH_SHORT).show();
-
-
-                                                    response = call.getResponse();
-                                                    current_user = new User(
-                                                            response.getJSONObject(0).getString("username"),
-                                                            response.getJSONObject(0).getString("email"),
-                                                            response.getJSONObject(0).getString("first_name"),
-                                                            token,
-                                                            expiration
-
-                                                    );
-                                                    shared.edit().clear();
-                                                    shared.edit().apply();
-                                                    shared.edit().putString("LastUser", current_user.username).commit();
-                                                    shared.edit().putString("Token", current_user.curr_token).commit();
-                                                    relogin.hide();
-                                                    onResume();
-                                                    log_count = 0;
-                                                    break;
-                                                case 400:
-                                                    for (View view : parents) {
-                                                        view.setVisibility(View.VISIBLE);
-                                                    }
-                                                    prog.setVisibility(View.GONE);
-                                                    Toast.makeText(UserPageActivity.this, "Invalid Login", Toast.LENGTH_SHORT).show();
-                                                    log_count++;
-                                                    if (log_count == 3) {
-                                                        logout();
-                                                    }
-
-
-                                                default:
-                                                    Log.e("catch", "catch");
-                                            }
-
-
-                                        }
-                                    }
-                                    username.setText("");
-                                    password.setText("");
-
-                                } catch (UnsupportedEncodingException e) {
-
-                                } catch (ConnectException e) {
-                                    for (View view : parents) {
-                                        view.setVisibility(View.VISIBLE);
-                                    }
-                                    prog.setVisibility(View.GONE);
-
-                                } catch (JSONException e) {
-
-                                }
-                            }
-                        });
-
-                        RelativeLayout rel_layout = new RelativeLayout(UserPageActivity.this);
-                        rel_layout.addView(username, new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT));
-                        RelativeLayout.LayoutParams pass_params = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,RelativeLayout.LayoutParams.WRAP_CONTENT);
-                        pass_params.addRule(RelativeLayout.BELOW, username.getId());
-                        rel_layout.addView(password, pass_params);
-                        RelativeLayout.LayoutParams submit_params = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,RelativeLayout.LayoutParams.WRAP_CONTENT);
-                        submit_params.addRule(RelativeLayout.BELOW, password.getId());
-                        submit_params.addRule(RelativeLayout.CENTER_HORIZONTAL,RelativeLayout.TRUE);
-                        rel_layout.addView(submit, submit_params);
-                        rel_layout.addView(prog,progparams);
-                        RelativeLayout.LayoutParams layout_params =new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT,RelativeLayout.LayoutParams.MATCH_PARENT);
-                        layout_params.addRule(RelativeLayout.CENTER_HORIZONTAL,RelativeLayout.TRUE);
-                        relogin.addContentView(rel_layout,layout_params);
-                        relogin.show();
-
-                }
-
-
-
-
-
-
-
+            }
         }
-        catch (ConnectException e){
-
-        }
-        catch(UnsupportedEncodingException e){
-            Log.e("UserPage",e.toString());
-
+        catch (ConnectException e) {
         }
         catch (JSONException e){
-            Log.e("UserPage", e.toString());
+            Log.e("User",e.toString());
         }
+        catch(UnsupportedEncodingException e) {
+            Log.e("User", e.toString());
+        }
+
+
 
 
     }

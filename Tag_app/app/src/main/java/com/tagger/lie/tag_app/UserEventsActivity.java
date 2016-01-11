@@ -436,7 +436,7 @@ public class UserEventsActivity extends ActionBarActivity {
                 break;
             case 401:
                 Log.e("Status", "denied");
-
+                /*
                 Dialog relogin = new Dialog(this);
                 final EditText username = new EditText(this);
                 final EditText password = new EditText(this);
@@ -498,7 +498,7 @@ public class UserEventsActivity extends ActionBarActivity {
                 });
 
 
-
+                */
 
 
                 response=getUserEvents(get_all);
@@ -838,7 +838,7 @@ public class UserEventsActivity extends ActionBarActivity {
 
 
                     APICall eC = new APICall(getApplicationContext(), "POST", "/events/creates/", request);
-                    refresh(eC);
+                    //refresh(eC);
                     try {
                         eC.connect();
                     } catch (ConnectException e) {
