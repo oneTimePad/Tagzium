@@ -5,7 +5,7 @@ from rest_framework import serializers
 from django.conf import settings
 
 from .models import Profile, Event,Picture
-
+'''
 def upload(instance,filename):
     ext = filename.split('.')[-1]
 
@@ -16,6 +16,7 @@ def upload(instance,filename):
             pic = Picture.objects.get(photo=fileName)
         except Picture.DoesNotExist:
             return fileName
+            '''
 
 class ProfileSerializer(serializers.ModelSerializer):
 
@@ -26,7 +27,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         fields = ('username','email','first_name')
 
 
-
+'''
 class PictureSerializer(serializers.Serializer):
     photo = serializers.CharField()
 
@@ -51,6 +52,7 @@ class PictureSerializer(serializers.Serializer):
 
             return True
         return False
+        '''
 
 class EventSerializer(serializers.ModelSerializer):
     #creator_s = ProfileSerializer(source='creator')

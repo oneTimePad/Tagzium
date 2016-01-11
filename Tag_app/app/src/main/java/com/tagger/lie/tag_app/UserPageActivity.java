@@ -1,6 +1,7 @@
 package com.tagger.lie.tag_app;
 
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -10,6 +11,7 @@ import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.ActionBarActivity;
+import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.support.design.widget.NavigationView;
@@ -20,18 +22,31 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Button;
+import android.widget.RelativeLayout;
+import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.UnsupportedEncodingException;
 import java.net.ConnectException;
+import java.util.concurrent.Callable;
 
 public class UserPageActivity extends ActionBarActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
     User current_user;
     SharedPreferences shared;
+    int log_count = 0;
+    String token=null;
+    Long expiration=null;
+
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,22 +78,173 @@ public class UserPageActivity extends ActionBarActivity
 
         try {
 
-            JSONObject user_info = new JSONObject((String) fromLogSign.getExtras().get("response"));
-            String token = (String)user_info.get("token");
-            JSONObject user_json = (JSONObject)user_info.get("user");
 
 
 
-            current_user = new User((String)user_json.get("username"),(String)user_json.get("email"),(String)user_json.get("first_name"),token);
             shared = this.getSharedPreferences("user_pref",MODE_WORLD_READABLE);
-            shared.edit().clear();
-            shared.edit().apply();
+            if((fromLogSign.getExtras().getString("response").equals("start"))){
+                token = shared.getString("Token",null);
+                expiration = shared.getLong("Expiration",0);
 
 
 
-            shared.edit().putString("LastUser", current_user.username).commit();
-            shared.edit().putString("Token",current_user.curr_token).commit();
+            }
+            else {
 
+                JSONObject token_info = new JSONObject((String) fromLogSign.getExtras().get("response"));
+
+                token = (String) token_info.get("token");
+
+                String[] token_split = token.split("\\.");
+
+                String token_decode = new String(Base64.decode(token_split[1].getBytes(), Base64.DEFAULT), "UTF-8");
+                JSONObject payload = new JSONObject(token_decode);
+                expiration=Long.parseLong(payload.getString("exp"));
+            }
+
+                APICall call = new APICall(UserPageActivity.this, "POST", "/users/get_user/", new JSONObject());
+                //call.authenticate(token,expiration);
+
+                call.connect();
+                switch (call.getStatus()) {
+
+                    case 200:
+                        JSONArray response = call.getResponse();
+                        current_user = new User(
+                                response.getJSONObject(0).getString("username"),
+                                response.getJSONObject(0).getString("email"),
+                                response.getJSONObject(0).getString("first_name"),
+                                token,
+                                expiration
+
+                        );
+                        shared.edit().clear();
+                        shared.edit().apply();
+                        shared.edit().putString("LastUser", current_user.username).commit();
+                        shared.edit().putString("Token", current_user.curr_token).commit();
+                        shared.edit().putLong("Expiration",current_user.expiration_date).commit();
+                        break;
+                    case 401:
+                        Dialog relogin = new Dialog(UserPageActivity.this);
+                        relogin.setTitle("Session has expired. Please login");
+                        final TextView username = new TextView(UserPageActivity.this);
+                        final TextView password = new TextView(UserPageActivity.this);
+                        username.setHint("username");
+                        password.setHint("password");
+                        username.setId(new Integer(1));
+                        password.setId(new Integer(2));
+                        Button submit = new Button(UserPageActivity.this);
+                        submit.setText("Login");
+
+
+
+                        submit.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                JSONObject request = new JSONObject();
+                                try {
+                                    if (!(username.getText().equals(""))) {
+                                        request.put("username", username.getText());
+                                        if (!(password.getText().equals(""))) {
+                                            request.put("password", password.getText());
+                                            Spinner spin = new Spinner(UserPageActivity.this);
+                                            spin.setVisibility(View.VISIBLE);
+                                            APICall call = new APICall(UserPageActivity.this, "POST", "/auth/login", request);
+                                            call.connect();
+                                            spin.setVisibility(View.GONE);
+
+                                            switch (call.getStatus()) {
+                                                case 200:
+
+                                                    JSONArray response = call.getResponse();
+                                                    String token_string = response.getJSONObject(0).getString("token");
+                                                    String[] token_split = token_string.split("\\.");
+
+                                                    String token_decode = new String(Base64.decode(token_split[1].getBytes(), Base64.DEFAULT), "UTF-8");
+                                                    JSONObject payload = new JSONObject(token_decode);
+
+                                                    current_user.curr_token = token_decode;
+                                                    current_user.expiration_date = Long.parseLong(payload.getString("exp"));
+                                                    call.authenticate(current_user.curr_token,current_user.expiration_date);
+                                                    call.connect();
+                                                    switch (call.getStatus()){
+                                                        case 401:
+                                                            Toast.makeText(UserPageActivity.this,"Error restoring session",Toast.LENGTH_SHORT).show();
+                                                            logout();
+                                                    }
+                                                    Toast.makeText(UserPageActivity.this,"Session Restored",Toast.LENGTH_SHORT).show();
+
+
+                                                    response = call.getResponse();
+                                                    current_user = new User(
+                                                            response.getJSONObject(0).getString("username"),
+                                                            response.getJSONObject(0).getString("email"),
+                                                            response.getJSONObject(0).getString("first_name"),
+                                                            token,
+                                                            expiration
+
+                                                    );
+                                                    shared.edit().clear();
+                                                    shared.edit().apply();
+                                                    shared.edit().putString("LastUser", current_user.username).commit();
+                                                    shared.edit().putString("Token", current_user.curr_token).commit();
+
+
+
+                                                    log_count=0;
+                                                case 400:
+                                                    Toast.makeText(UserPageActivity.this, "Invalid Login", Toast.LENGTH_SHORT).show();
+                                                    log_count++;
+                                                    if(log_count==3){
+                                                        logout();
+                                                    }
+
+
+                                                default:
+                                                    Log.e("catch", "catch");
+                                            }
+
+
+                                        }
+                                    }
+                                    username.setText("");
+                                    password.setText("");
+
+                                } catch (UnsupportedEncodingException e) {
+
+                                } catch (ConnectException e) {
+
+                                } catch (JSONException e) {
+
+                                }
+                            }
+                        });
+
+                        RelativeLayout rel_layout = new RelativeLayout(UserPageActivity.this);
+                        rel_layout.addView(username, new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT));
+                        RelativeLayout.LayoutParams pass_params = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,RelativeLayout.LayoutParams.WRAP_CONTENT);
+                        pass_params.addRule(RelativeLayout.BELOW, username.getId());
+                        rel_layout.addView(password, pass_params);
+                        RelativeLayout.LayoutParams submit_params = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,RelativeLayout.LayoutParams.WRAP_CONTENT);
+                        submit_params.addRule(RelativeLayout.BELOW,password.getId());
+                        rel_layout.addView(submit, submit_params);
+                        relogin.addContentView(rel_layout,new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT,RelativeLayout.LayoutParams.MATCH_PARENT));
+                        relogin.show();
+
+                }
+
+
+
+
+
+
+
+        }
+        catch (ConnectException e){
+
+        }
+        catch(UnsupportedEncodingException e){
+            Log.e("UserPage",e.toString());
 
         }
         catch (JSONException e){
@@ -150,6 +316,9 @@ public class UserPageActivity extends ActionBarActivity
     public void logout(){
         shared.edit().remove("LastUser").commit();
         shared.edit().remove("Token").commit();
+        shared.edit().remove("Expiration").commit();
+
+        /*
         APICall logout = new APICall(getApplicationContext(),"POST","/users/logout/",new JSONObject());
         logout.authenticate(current_user.curr_token);
         try {
@@ -170,7 +339,7 @@ public class UserPageActivity extends ActionBarActivity
                 break;
             default:
                 break;
-        }
+        }*/
         startActivity(new Intent(UserPageActivity.this,MainActivity.class));
         finish();
     }

@@ -53,13 +53,13 @@ public class MainActivity extends AppCompatActivity {
 
         JSONObject request = new JSONObject();
         try {
-            request.put("username", username);
+            request.put("token", token);
         }
         catch (JSONException e){
             Log.e("Main",e.toString());
         }
-        APICall call = new APICall(MainActivity.this,"POST","/users/maintain_session/",request);
-        call.authenticate(token);
+        APICall call = new APICall(MainActivity.this,"POST","/auth/verify",request);
+
 
         try{
             call.connect();
@@ -70,14 +70,11 @@ public class MainActivity extends AppCompatActivity {
 
         switch(call.getStatus()){
             case 200:
-                JSONArray response = call.getResponse();
+
                 Intent toUserPage = new Intent(MainActivity.this,UserPageActivity.class);
-                try {
-                    toUserPage.putExtra("response", response.getJSONObject(0).toString());
-                }
-                catch (JSONException e){
-                    Log.e("Main",e.toString());
-                }
+
+                toUserPage.putExtra("response", "start");
+
 
                 startActivity(toUserPage);
                 break;

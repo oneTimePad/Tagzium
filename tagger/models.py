@@ -21,9 +21,9 @@ class Event(models.Model):
     event_name = models.CharField(max_length=200)
     creator = models.ForeignKey('Profile',related_name="creator")
     users = models.ManyToManyField(Profile,related_name='events_in')
-    logo = models.ImageField(upload_to=upload,default=0)
+    #logo = models.ImageField(upload_to=upload,default=0)
 
 class Picture(models.Model):
-    photo = models.ImageField(upload_to=upload,default=0)
+    photo = models.ImageField(default=0)
     event = models.ForeignKey('Event',default=0)
     users = models.ManyToManyField(Profile,related_name='pictures_in',default=0)

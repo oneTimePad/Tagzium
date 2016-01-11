@@ -1,9 +1,11 @@
 package com.tagger.lie.tag_app;
 
+import android.app.Dialog;
 import android.content.Context;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import org.json.JSONArray;
@@ -95,6 +97,7 @@ public class APICall {
 
             con.setRequestMethod(method);
             this.request = request;
+            this.ctx = ctx;
 
         }
         catch (ProtocolException e){
@@ -136,10 +139,15 @@ public class APICall {
 
     }
 
-    public void authenticate(String token){
-        con.setRequestProperty("Authorization", "Token "+token);
+    public void authenticate(String token,long expiration_date){
+
+
+        con.setRequestProperty("Authorization", "JWT "+token);
+
 
     }
+
+
 
     private  class ResponseThread extends HandlerThread{
         Handler mHandler;

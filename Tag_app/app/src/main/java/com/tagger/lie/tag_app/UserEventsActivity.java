@@ -6,6 +6,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.LabeledIntent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -62,6 +63,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Array;
 import java.net.ConnectException;
 import java.util.ArrayList;
@@ -115,6 +117,76 @@ public class UserEventsActivity extends ActionBarActivity {
 
     }
 
+    private  ReloginDialog relogin(){
+
+            boolean return_val = false;
+            int trys = 0;
+            ReloginDialog box=null;
+            while(!return_val) {
+                if (trys == 3) {
+                    SharedPreferences shared = this.getSharedPreferences("user_pref", MODE_WORLD_READABLE);
+                    shared.edit().remove("LastUser");
+                    shared.edit().remove("Token");
+                    shared.edit().remove("Expiration");
+                    Intent logout = new Intent(UserEventsActivity.this, MainActivity.class);
+                    startActivity(logout);
+                    finish();
+                }
+                box = new ReloginDialog(UserEventsActivity.this);
+                return_val = box.alert();
+                trys++;
+
+            }
+        Toast.makeText(UserEventsActivity.this,"Session Restored",Toast.LENGTH_SHORT).show();
+            return box;
+
+
+    }
+
+    private void refresh(APICall current_call){
+        if(current_user.expiration_date-(System.currentTimeMillis()/1000)<=60){
+
+            JSONObject request = new JSONObject();
+            try {
+                request.put("token", current_user.curr_token);
+
+                APICall call = new APICall(UserEventsActivity.this, "POST", "/auth/refresh", request);
+                call.connect();
+                switch (call.getStatus()){
+                    case 200:
+                        JSONArray response = call.getResponse();
+                        String token = response.getJSONObject(0).getString("token");
+
+                        String[] token_split = token.split("\\.");
+
+                        String token_decode = new String(Base64.decode(token_split[1].getBytes(), Base64.DEFAULT), "UTF-8");
+                        JSONObject payload = new JSONObject(token_decode);
+
+                        current_user.curr_token=token;
+                        current_user.expiration_date=payload.getLong("exp");
+                        current_call.authenticate(current_user.curr_token, current_user.expiration_date);
+                        SharedPreferences shared = this.getSharedPreferences("user_pref", MODE_WORLD_READABLE);
+                        shared.edit().remove("Token");
+                        shared.edit().remove("Expiration");
+                        shared.edit().putString("Token", current_user.curr_token);
+                        shared.edit().putLong("Expiration",current_user.expiration_date);
+
+
+                }
+
+            }
+            catch (ConnectException e){
+
+
+            }
+            catch (JSONException e){
+                Log.e("Events",e.toString());
+            }
+            catch (UnsupportedEncodingException e){
+                Log.e("Events",e.toString());
+            }
+        }
+    }
 
 
     @Override
@@ -165,7 +237,7 @@ public class UserEventsActivity extends ActionBarActivity {
         try {
 
             if (current_user.events == null) {
-                events = getUserEvents();
+                events = getUserEvents(true);
                 if(events!=null) {
                     current_user.events = events.toString();
                 }
@@ -193,7 +265,7 @@ public class UserEventsActivity extends ActionBarActivity {
             @Override
             public void onRefresh() {
                 refresh_layout.setRefreshing(true);
-                JSONArray events = getUserEvents();
+                JSONArray events = getUserEvents(false);
                 if (events == null) {
                     refresh_layout.setRefreshing(false);
                     return;
@@ -332,25 +404,42 @@ public class UserEventsActivity extends ActionBarActivity {
     }
 
 
-    private JSONArray getUserEvents() {
+    private JSONArray getUserEvents(boolean get_all) {
 
+        JSONObject request =new JSONObject();
 
-        APICall getEvents = new APICall(getApplicationContext(), "POST", "/events/retrieve_users/", new JSONObject());
-        getEvents.authenticate(current_user.curr_token);
+        if(get_all){
+            try {
+                request.put("return_all", "true");
+            }
+            catch (JSONException e){
+                Log.e("Events",e.toString());
+                return null;
+            }
+        }
+
+        APICall getEvents = new APICall(getApplicationContext(), "POST", "/events/retrieve_users/", request);
+        refresh(getEvents);
+        getEvents.authenticate(current_user.curr_token,current_user.expiration_date);
+
         try {
             getEvents.connect();
         } catch (ConnectException e) {
             return null;
         }
+        JSONArray response =null;
         switch (getEvents.getStatus()) {
 
             case 200:
                 Log.d("Status", "Success");
+                response = getEvents.getResponse();
                 break;
-            case 400:
-                return null;
             case 401:
                 Log.e("Status", "denied");
+                ReloginDialog box = relogin();
+                current_user.curr_token=box.get_token();
+                current_user.expiration_date=box.get_expiration();
+                response=getUserEvents(get_all);
                 break;
 
             default:
@@ -358,7 +447,7 @@ public class UserEventsActivity extends ActionBarActivity {
 
         }
 
-        JSONArray response = getEvents.getResponse();
+
         return response;
 
     }
@@ -632,7 +721,7 @@ public class UserEventsActivity extends ActionBarActivity {
             public void onClick(View view) {
 
                 did_submit = 1;
-                String en = (String) event_name.getText().toString();
+                String en =  event_name.getText().toString();
                 if (en.equals("")) {
                     return;
                 }
@@ -687,7 +776,7 @@ public class UserEventsActivity extends ActionBarActivity {
 
 
                     APICall eC = new APICall(getApplicationContext(), "POST", "/events/creates/", request);
-                    eC.authenticate(current_user.curr_token);
+                    refresh(eC);
                     try {
                         eC.connect();
                     } catch (ConnectException e) {
@@ -701,9 +790,12 @@ public class UserEventsActivity extends ActionBarActivity {
                             Toast.makeText(UserEventsActivity.this, "Bad Request", Toast.LENGTH_SHORT).show();
                             break;
                         case 401:
-                            Toast.makeText(UserEventsActivity.this, "Session Expired", Toast.LENGTH_SHORT).show();
-                            startActivity(new Intent(UserEventsActivity.this, MainActivity.class));
-                            finish();
+
+                            ReloginDialog box = relogin();
+                            current_user.curr_token = box.get_token();
+                            current_user.expiration_date = box.get_expiration();
+
+
                             break;
                         default:
                             break;

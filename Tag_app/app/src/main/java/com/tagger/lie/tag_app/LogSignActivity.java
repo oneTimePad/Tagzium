@@ -241,9 +241,10 @@ public class LogSignActivity extends ActionBarActivity {
 
                                 Intent toUserPage = new Intent(LogSignActivity.this,UserPageActivity.class);
                                 toUserPage.putExtra("response",response.getJSONObject(0).toString());
+                                toUserPage.putExtra("username",request.getString("username"));
 
                                 startActivity(toUserPage);
-                                Log.e("finished","finished");
+
                                 finish();
                                 break;
 

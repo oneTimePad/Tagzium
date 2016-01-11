@@ -2,38 +2,37 @@ from django.shortcuts import render
 from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from rest_framework.authtoken.models import Token
-from rest_framework.authentication import TokenAuthentication
+
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework_jwt.authentication import JSONWebTokenAuthentication
+
 from django.contrib.auth.models import User
 from rest_framework.response import Response
 #from simple_email_confirmation import send_email
-from tagger.models import *
 from django.db import IntegrityError
 from rest_framework import status
 import pdb
 from datetime import datetime,timedelta
 from .serializers import *
-import pytz
 from rest_framework import exceptions
 
 from .models import *
 from rest_framework import viewsets
 from django.contrib.auth import get_user_model
-from rest_framework.decorators import list_route
+from rest_framework.decorators import list_route,detail_route
 from django.core.cache import cache
 from django.core.files.uploadedfile import InMemoryUploadedFile
 
 
 
 
-
+'''
 @receiver(post_save,sender=settings.AUTH_USER_MODEL)
 def create_auth_token(sender, instance=None, created=False, **kwargs):
     if created:
         Token.objects.create(user=instance)
+'''
 
 
 
@@ -42,8 +41,7 @@ def create_auth_token(sender, instance=None, created=False, **kwargs):
 
 
 
-
-
+'''
 class ExpiringTokenAuthentication(TokenAuthentication):
     def has_permission(self, request,view):
 
@@ -67,17 +65,25 @@ class ExpiringTokenAuthentication(TokenAuthentication):
             raise exceptions.AuthenticationFailed('Token has expired')
 
         return token.user, token
+        '''
 
 
 class UserViewSet(viewsets.ModelViewSet):
         serializer_class = ProfileSerializer
-        authentication_classes = (TokenAuthentication,)
-        permission_classes = (ExpiringTokenAuthentication,)
+        authentication_classes = (JSONWebTokenAuthentication,)
+        permission_classes = (IsAuthenticated,)
 
         @list_route(methods=['post'])
         def logout(self,request,pk=None):
             request.user.user_token.delete()
             return Response({'Status':'Success'})
+
+        @list_route(methods=['post'])
+        def get_user(self,request,pk=None):
+            user_ser = ProfileSerializer(request.user)
+            cache.set("return_all",1)
+            return Response(user_ser.data)
+
 
         @list_route(methods=['post'])
         def change_password(self,request,pk=None):
@@ -116,14 +122,7 @@ class UserViewSet(viewsets.ModelViewSet):
             user.first_name=data['new_name']
             user.save()
             return Response({'Status':'Success'})
-        @list_route(methods=['post'])
-        def maintain_session(self,request,pk=None):
-
-            User = get_user_model()
-            user =User.objects.get(username=request.data['username'])
-            user_ser = ProfileSerializer(user)
-            cache.set("return_all",1)
-            return Response({'user':user_ser.data,'token':request.auth.key})
+        
 
 
 @receiver(post_save,sender=Event)
@@ -143,8 +142,8 @@ def on_recent_event(sender, instance=None, created=False, **kwargs):
 
 
 class EventViewSet(viewsets.ModelViewSet):
-    authentication_classes = (TokenAuthentication,)
-    permission_classes = (ExpiringTokenAuthentication,)
+    authentication_classes = (JSONWebTokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
     serializer_class = EventSerializer
     @list_route(methods=['post'])
     def creates(self,request):
@@ -170,10 +169,9 @@ class EventViewSet(viewsets.ModelViewSet):
 
         if len(request.user.creator.all()) == 0:
             return Response('no_events',status=status.HTTP_400_BAD_REQUEST)
-
-        if cache.has_key('return_all'):
+        pdb.set_trace()
+        if 'return_all' in request.data:
             query_ser = UserEventSerializer(request.user.creator.all(),many=True)
-            cache.delete('return_all')
             return Response(query_ser.data)
 
         if not cache.has_key(request.user.username+'_recent_events'):
@@ -190,7 +188,7 @@ class EventViewSet(viewsets.ModelViewSet):
 
 
 
-
+'''
 class ObtainExpiringAuthToken(ObtainAuthToken):
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
@@ -209,6 +207,8 @@ class ObtainExpiringAuthToken(ObtainAuthToken):
             cache.set("return_all",1)
             return Response({'user':user_ser.data,'token':token.key})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        '''
+
 '''
 class EmailConfirmation(APIView):
 

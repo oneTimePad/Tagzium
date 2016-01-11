@@ -2,11 +2,13 @@ package com.tagger.lie.tag_app;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.support.v4.app.NavUtils;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Base64;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -22,9 +24,11 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.UnsupportedEncodingException;
 import java.net.ConnectException;
 import java.util.ArrayList;
 
@@ -55,6 +59,81 @@ public class UserSettingsActivity extends ActionBarActivity {
         });
 
     }
+
+    private ReloginDialog relogin(){
+
+            boolean return_val = false;
+            int trys = 0;
+            ReloginDialog box = null;
+            while(!return_val) {
+                if(trys==3){
+                    SharedPreferences shared =UserSettingsActivity.this.getSharedPreferences("user_pref", MODE_WORLD_READABLE);
+                    shared.edit().remove("LastUser");
+                    shared.edit().remove("Token");
+                    Intent logout = new Intent(UserSettingsActivity.this,MainActivity.class);
+                    startActivity(logout);
+                    finish();
+                }
+                box = new ReloginDialog(UserSettingsActivity.this);
+                return_val = box.alert();
+                trys++;
+
+            }
+            Toast.makeText(UserSettingsActivity.this,"Session Restored",Toast.LENGTH_SHORT).show();
+        return box;
+
+    }
+
+
+    private void refresh(APICall current_call){
+
+
+        if(user.expiration_date-(System.currentTimeMillis()/1000)<=60){
+
+            JSONObject request_refresh = new JSONObject();
+            try {
+                request_refresh.put("token", user.curr_token);
+
+                APICall call = new APICall(UserSettingsActivity.this, "POST", "/auth/refresh", request_refresh);
+                call.connect();
+                switch (call.getStatus()){
+                    case 200:
+                        JSONArray response = call.getResponse();
+                        String token = response.getJSONObject(0).getString("token");
+
+                        String[] token_split = token.split("\\.");
+
+                        String token_decode = new String(Base64.decode(token_split[1].getBytes(), Base64.DEFAULT), "UTF-8");
+                        JSONObject payload = new JSONObject(token_decode);
+
+                        user.curr_token=token;
+                        user.expiration_date=payload.getLong("exp");
+                        current_call.authenticate(user.curr_token,user.expiration_date);
+                        SharedPreferences shared = this.getSharedPreferences("user_pref", MODE_WORLD_READABLE);
+                        shared.edit().remove("Token");
+                        shared.edit().remove("Expiration");
+                        shared.edit().putString("Token",user.curr_token);
+                        shared.edit().putLong("Expiration",user.expiration_date);
+
+
+                }
+
+            }
+            catch (ConnectException e){
+
+
+            }
+            catch (JSONException e){
+                Log.e("Events",e.toString());
+            }
+            catch (UnsupportedEncodingException e){
+                Log.e("Events",e.toString());
+            }
+        }
+
+
+    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -162,7 +241,12 @@ public class UserSettingsActivity extends ActionBarActivity {
                             request.put("old_password", old_Pass.getText().toString());
                             request.put("new_password", new_Pass.getText().toString());
                             APICall chg = new APICall(getApplicationContext(),"POST", "/users/change_password/", request);
-                            chg.authenticate(user.curr_token);
+                            refresh(chg);
+
+
+
+
+
                             try {
 
                                 chg.connect();
@@ -179,10 +263,9 @@ public class UserSettingsActivity extends ActionBarActivity {
                                     Toast.makeText(UserSettingsActivity.this, "Password Successfully Changed", Toast.LENGTH_SHORT).show();
                                     break;
                                 case 401:
-                                    Toast.makeText(UserSettingsActivity.this, "Session Expired", Toast.LENGTH_SHORT).show();
-                                    startActivity(new Intent(UserSettingsActivity.this, MainActivity.class));
-                                    finish(); Log.e("change_password", "Invalid authentication");
-
+                                    ReloginDialog box = relogin();
+                                    user.curr_token = box.get_token();
+                                    user.expiration_date =box.get_expiration();
                                     break;
                                 case 400:
                                     Log.e("change_password", "Invalid old password");
@@ -245,7 +328,10 @@ public class UserSettingsActivity extends ActionBarActivity {
                                 request.put("new_username", new_user.getText().toString());
 
                                 APICall chg = new APICall(getApplicationContext(),"POST", "/users/change_username/", request);
-                                chg.authenticate(user.curr_token);
+
+                                refresh(chg);
+
+
                                 try {
                                     chg.connect();
                                 }
@@ -261,10 +347,9 @@ public class UserSettingsActivity extends ActionBarActivity {
                                         Toast.makeText(UserSettingsActivity.this, "Username Successfully Changed", Toast.LENGTH_SHORT).show();
                                         break;
                                     case 401:
-                                        Log.e("change_username", "Invalid authentication");
-                                        Toast.makeText(UserSettingsActivity.this, "Session Expired", Toast.LENGTH_SHORT).show();
-                                        startActivity(new Intent(UserSettingsActivity.this, MainActivity.class));
-                                        finish();
+                                        ReloginDialog box = relogin();
+                                        user.curr_token = box.get_token();
+                                        user.expiration_date =box.get_expiration();
                                         break;
 
 
@@ -323,7 +408,8 @@ public class UserSettingsActivity extends ActionBarActivity {
                             request.put("new_email", new_email.getText().toString());
 
                             APICall chg = new APICall(getApplicationContext(),"POST", "/users/change_email/", request);
-                            chg.authenticate(user.curr_token);
+
+                            refresh(chg);
                             try {
                                 chg.connect();
                             }
@@ -339,10 +425,9 @@ public class UserSettingsActivity extends ActionBarActivity {
                                     Toast.makeText(UserSettingsActivity.this, "Email Successfully Changed", Toast.LENGTH_SHORT).show();
                                     break;
                                 case 401:
-                                    Log.e("change_email", "Invalid authentication");
-                                    Toast.makeText(UserSettingsActivity.this, "Session Expired", Toast.LENGTH_SHORT).show();
-                                    startActivity(new Intent(UserSettingsActivity.this, MainActivity.class));
-                                    finish();
+                                    ReloginDialog box = relogin();
+                                    user.curr_token = box.get_token();
+                                    user.expiration_date =box.get_expiration();
                                     break;
 
 
@@ -401,7 +486,8 @@ public class UserSettingsActivity extends ActionBarActivity {
                             request.put("new_name", new_name.getText().toString());
 
                             APICall chg = new APICall(getApplicationContext(),"POST", "/users/change_name/", request);
-                            chg.authenticate(user.curr_token);
+
+                            refresh(chg);
                             try {
                                 chg.connect();
                             }
@@ -417,10 +503,9 @@ public class UserSettingsActivity extends ActionBarActivity {
                                     Toast.makeText(UserSettingsActivity.this, "Name Successfully Changed", Toast.LENGTH_SHORT).show();
                                     break;
                                 case 401:
-                                    Log.e("change_name", "Invalid authentication");
-                                    Toast.makeText(UserSettingsActivity.this, "Session Expired", Toast.LENGTH_SHORT).show();
-                                    startActivity(new Intent(UserSettingsActivity.this, MainActivity.class));
-                                    finish();
+                                    ReloginDialog box = relogin();
+                                    user.curr_token = box.get_token();
+                                    user.expiration_date =box.get_expiration();
                                     break;
 
 
