@@ -2,6 +2,7 @@ package com.tagger.lie.tag_app;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -22,7 +23,10 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -34,6 +38,7 @@ import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
 import java.net.ConnectException;
+import java.util.ArrayList;
 import java.util.concurrent.Callable;
 
 public class UserPageActivity extends ActionBarActivity
@@ -48,13 +53,13 @@ public class UserPageActivity extends ActionBarActivity
 
 
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_user_page);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -75,6 +80,7 @@ public class UserPageActivity extends ActionBarActivity
         navigationView.setNavigationItemSelectedListener(this);
 
         Intent fromLogSign = getIntent();
+
 
         try {
 
@@ -103,7 +109,7 @@ public class UserPageActivity extends ActionBarActivity
             }
 
                 APICall call = new APICall(UserPageActivity.this, "POST", "/users/get_user/", new JSONObject());
-                //call.authenticate(token,expiration);
+                call.authenticate(token, expiration);
 
                 call.connect();
                 switch (call.getStatus()) {
@@ -125,33 +131,48 @@ public class UserPageActivity extends ActionBarActivity
                         shared.edit().putLong("Expiration",current_user.expiration_date).commit();
                         break;
                     case 401:
-                        Dialog relogin = new Dialog(UserPageActivity.this);
-                        relogin.setTitle("Session has expired. Please login");
-                        final TextView username = new TextView(UserPageActivity.this);
-                        final TextView password = new TextView(UserPageActivity.this);
+
+                        Toast.makeText(UserPageActivity.this,"Session Expired",Toast.LENGTH_SHORT).show();
+                        final Dialog relogin = new Dialog(UserPageActivity.this);
+                        relogin.setCancelable(false);
+                        relogin.setTitle("Please Login");
+                        final EditText username = new EditText(UserPageActivity.this);
+                        final EditText password = new EditText(UserPageActivity.this);
                         username.setHint("username");
                         password.setHint("password");
                         username.setId(new Integer(1));
                         password.setId(new Integer(2));
                         Button submit = new Button(UserPageActivity.this);
                         submit.setText("Login");
+                        final ArrayList<View> parents = new ArrayList<>();
+                        parents.add(username);
+                        parents.add(password);
+                        parents.add(submit);
+
+                        final ProgressBar prog = new ProgressBar(UserPageActivity.this);
+                        RelativeLayout.LayoutParams progparams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                        progparams.addRule(RelativeLayout.CENTER_HORIZONTAL,RelativeLayout.TRUE);
+                        prog.setVisibility(View.GONE);
 
 
 
                         submit.setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
+                                for (View view : parents) {
+                                    view.setVisibility(View.GONE);
+                                }
+                                prog.setVisibility(View.VISIBLE);
                                 JSONObject request = new JSONObject();
                                 try {
                                     if (!(username.getText().equals(""))) {
                                         request.put("username", username.getText());
                                         if (!(password.getText().equals(""))) {
                                             request.put("password", password.getText());
-                                            Spinner spin = new Spinner(UserPageActivity.this);
-                                            spin.setVisibility(View.VISIBLE);
+
                                             APICall call = new APICall(UserPageActivity.this, "POST", "/auth/login", request);
                                             call.connect();
-                                            spin.setVisibility(View.GONE);
+
 
                                             switch (call.getStatus()) {
                                                 case 200:
@@ -163,16 +184,17 @@ public class UserPageActivity extends ActionBarActivity
                                                     String token_decode = new String(Base64.decode(token_split[1].getBytes(), Base64.DEFAULT), "UTF-8");
                                                     JSONObject payload = new JSONObject(token_decode);
 
-                                                    current_user.curr_token = token_decode;
-                                                    current_user.expiration_date = Long.parseLong(payload.getString("exp"));
-                                                    call.authenticate(current_user.curr_token,current_user.expiration_date);
+                                                    token = token_string;
+                                                    expiration = Long.parseLong(payload.getString("exp"));
+                                                    call = new APICall(UserPageActivity.this, "POST", "/users/get_user/", new JSONObject());
+                                                    call.authenticate(token, expiration);
                                                     call.connect();
-                                                    switch (call.getStatus()){
+                                                    switch (call.getStatus()) {
                                                         case 401:
-                                                            Toast.makeText(UserPageActivity.this,"Error restoring session",Toast.LENGTH_SHORT).show();
+                                                            Toast.makeText(UserPageActivity.this, "Error restoring session", Toast.LENGTH_SHORT).show();
                                                             logout();
                                                     }
-                                                    Toast.makeText(UserPageActivity.this,"Session Restored",Toast.LENGTH_SHORT).show();
+                                                    Toast.makeText(UserPageActivity.this, "Session Restored", Toast.LENGTH_SHORT).show();
 
 
                                                     response = call.getResponse();
@@ -188,14 +210,18 @@ public class UserPageActivity extends ActionBarActivity
                                                     shared.edit().apply();
                                                     shared.edit().putString("LastUser", current_user.username).commit();
                                                     shared.edit().putString("Token", current_user.curr_token).commit();
-
-
-
-                                                    log_count=0;
+                                                    relogin.hide();
+                                                    onResume();
+                                                    log_count = 0;
+                                                    break;
                                                 case 400:
+                                                    for (View view : parents) {
+                                                        view.setVisibility(View.VISIBLE);
+                                                    }
+                                                    prog.setVisibility(View.GONE);
                                                     Toast.makeText(UserPageActivity.this, "Invalid Login", Toast.LENGTH_SHORT).show();
                                                     log_count++;
-                                                    if(log_count==3){
+                                                    if (log_count == 3) {
                                                         logout();
                                                     }
 
@@ -213,6 +239,10 @@ public class UserPageActivity extends ActionBarActivity
                                 } catch (UnsupportedEncodingException e) {
 
                                 } catch (ConnectException e) {
+                                    for (View view : parents) {
+                                        view.setVisibility(View.VISIBLE);
+                                    }
+                                    prog.setVisibility(View.GONE);
 
                                 } catch (JSONException e) {
 
@@ -226,9 +256,13 @@ public class UserPageActivity extends ActionBarActivity
                         pass_params.addRule(RelativeLayout.BELOW, username.getId());
                         rel_layout.addView(password, pass_params);
                         RelativeLayout.LayoutParams submit_params = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,RelativeLayout.LayoutParams.WRAP_CONTENT);
-                        submit_params.addRule(RelativeLayout.BELOW,password.getId());
+                        submit_params.addRule(RelativeLayout.BELOW, password.getId());
+                        submit_params.addRule(RelativeLayout.CENTER_HORIZONTAL,RelativeLayout.TRUE);
                         rel_layout.addView(submit, submit_params);
-                        relogin.addContentView(rel_layout,new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT,RelativeLayout.LayoutParams.MATCH_PARENT));
+                        rel_layout.addView(prog,progparams);
+                        RelativeLayout.LayoutParams layout_params =new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT,RelativeLayout.LayoutParams.MATCH_PARENT);
+                        layout_params.addRule(RelativeLayout.CENTER_HORIZONTAL,RelativeLayout.TRUE);
+                        relogin.addContentView(rel_layout,layout_params);
                         relogin.show();
 
                 }
@@ -266,8 +300,9 @@ public class UserPageActivity extends ActionBarActivity
     @Override
     public  void onResume(){
         super.onResume();
-
-        getSupportActionBar().setTitle(current_user.first_name);
+        if(current_user!=null) {
+            getSupportActionBar().setTitle(current_user.first_name);
+        }
     }
 
     public void logout_alert(){

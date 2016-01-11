@@ -59,7 +59,7 @@ public class UserSettingsActivity extends ActionBarActivity {
         });
 
     }
-
+    /*
     private ReloginDialog relogin(){
 
             boolean return_val = false;
@@ -82,7 +82,7 @@ public class UserSettingsActivity extends ActionBarActivity {
             Toast.makeText(UserSettingsActivity.this,"Session Restored",Toast.LENGTH_SHORT).show();
         return box;
 
-    }
+    }*/
 
 
     private void refresh(APICall current_call){
@@ -263,9 +263,9 @@ public class UserSettingsActivity extends ActionBarActivity {
                                     Toast.makeText(UserSettingsActivity.this, "Password Successfully Changed", Toast.LENGTH_SHORT).show();
                                     break;
                                 case 401:
-                                    ReloginDialog box = relogin();
-                                    user.curr_token = box.get_token();
-                                    user.expiration_date =box.get_expiration();
+                                   // ReloginDialog box = relogin();
+                                    //user.curr_token = box.get_token();
+                                    //user.expiration_date =box.get_expiration();
                                     break;
                                 case 400:
                                     Log.e("change_password", "Invalid old password");
@@ -347,9 +347,9 @@ public class UserSettingsActivity extends ActionBarActivity {
                                         Toast.makeText(UserSettingsActivity.this, "Username Successfully Changed", Toast.LENGTH_SHORT).show();
                                         break;
                                     case 401:
-                                        ReloginDialog box = relogin();
-                                        user.curr_token = box.get_token();
-                                        user.expiration_date =box.get_expiration();
+                                       // ReloginDialog box = relogin();
+                                       // user.curr_token = box.get_token();
+                                       // user.expiration_date =box.get_expiration();
                                         break;
 
 
@@ -425,9 +425,9 @@ public class UserSettingsActivity extends ActionBarActivity {
                                     Toast.makeText(UserSettingsActivity.this, "Email Successfully Changed", Toast.LENGTH_SHORT).show();
                                     break;
                                 case 401:
-                                    ReloginDialog box = relogin();
-                                    user.curr_token = box.get_token();
-                                    user.expiration_date =box.get_expiration();
+                                   // ReloginDialog box = relogin();
+                                   // user.curr_token = box.get_token();
+                                    //user.expiration_date =box.get_expiration();
                                     break;
 
 
@@ -503,9 +503,9 @@ public class UserSettingsActivity extends ActionBarActivity {
                                     Toast.makeText(UserSettingsActivity.this, "Name Successfully Changed", Toast.LENGTH_SHORT).show();
                                     break;
                                 case 401:
-                                    ReloginDialog box = relogin();
-                                    user.curr_token = box.get_token();
-                                    user.expiration_date =box.get_expiration();
+                                  //  ReloginDialog box = relogin();
+                                   // user.curr_token = box.get_token();
+                                   // user.expiration_date =box.get_expiration();
                                     break;
 
 

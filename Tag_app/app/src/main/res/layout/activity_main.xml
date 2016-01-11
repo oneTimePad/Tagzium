@@ -8,7 +8,8 @@
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="com.tagger.lie.tag_app.MainActivity"
-    android:background="#f7f9fc">
+    android:background="#f7f9fc"
+    android:id="@+id/main_act">
 
 
     <Button

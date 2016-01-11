@@ -122,7 +122,7 @@ class UserViewSet(viewsets.ModelViewSet):
             user.first_name=data['new_name']
             user.save()
             return Response({'Status':'Success'})
-        
+
 
 
 @receiver(post_save,sender=Event)
@@ -169,7 +169,7 @@ class EventViewSet(viewsets.ModelViewSet):
 
         if len(request.user.creator.all()) == 0:
             return Response('no_events',status=status.HTTP_400_BAD_REQUEST)
-        pdb.set_trace()
+
         if 'return_all' in request.data:
             query_ser = UserEventSerializer(request.user.creator.all(),many=True)
             return Response(query_ser.data)

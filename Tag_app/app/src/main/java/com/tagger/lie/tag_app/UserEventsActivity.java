@@ -46,6 +46,7 @@ import android.widget.GridView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -116,7 +117,7 @@ public class UserEventsActivity extends ActionBarActivity {
         });
 
     }
-
+    /*
     private  ReloginDialog relogin(){
 
             boolean return_val = false;
@@ -141,10 +142,10 @@ public class UserEventsActivity extends ActionBarActivity {
             return box;
 
 
-    }
+    }*/
 
-    private void refresh(APICall current_call){
-        if(current_user.expiration_date-(System.currentTimeMillis()/1000)<=60){
+    private void refresh(){
+        if(current_user.expiration_date-(System.currentTimeMillis()/1000)<=300){
 
             JSONObject request = new JSONObject();
             try {
@@ -164,7 +165,6 @@ public class UserEventsActivity extends ActionBarActivity {
 
                         current_user.curr_token=token;
                         current_user.expiration_date=payload.getLong("exp");
-                        current_call.authenticate(current_user.curr_token, current_user.expiration_date);
                         SharedPreferences shared = this.getSharedPreferences("user_pref", MODE_WORLD_READABLE);
                         shared.edit().remove("Token");
                         shared.edit().remove("Expiration");
@@ -419,7 +419,7 @@ public class UserEventsActivity extends ActionBarActivity {
         }
 
         APICall getEvents = new APICall(getApplicationContext(), "POST", "/events/retrieve_users/", request);
-        refresh(getEvents);
+        refresh();
         getEvents.authenticate(current_user.curr_token,current_user.expiration_date);
 
         try {
@@ -436,9 +436,71 @@ public class UserEventsActivity extends ActionBarActivity {
                 break;
             case 401:
                 Log.e("Status", "denied");
-                ReloginDialog box = relogin();
-                current_user.curr_token=box.get_token();
-                current_user.expiration_date=box.get_expiration();
+
+                Dialog relogin = new Dialog(this);
+                final EditText username = new EditText(this);
+                final EditText password = new EditText(this);
+                username.setHint("username");
+                password.setHint("password");
+                final Button submit = new Button(this);
+                submit.setText("Login");
+
+                final ProgressBar progress = new ProgressBar(this);
+                progress.setVisibility(View.GONE);
+
+                final ArrayList<View> parents = new ArrayList<>();
+                parents.add(username);
+                parents.add(password);
+                parents.add(submit);
+
+                submit.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        for(View view: parents){
+                            view.setVisibility(View.GONE);
+                        }
+                        progress.setVisibility(View.VISIBLE);
+
+                        JSONObject request = new JSONObject();
+                        try {
+                            if (!(username.getText().equals(""))) {
+                                request.put("username", username.getText());
+                                if (!(password.getText().equals(""))) {
+                                    request.put("password", password.getText());
+
+                                    APICall call = new APICall(UserEventsActivity.this, "POST", "/auth/login", request);
+                                    call.connect();
+
+
+                                    switch (call.getStatus()) {
+                                        case 200:
+
+                                            JSONArray response = call.getResponse();
+                                            String token_string = response.getJSONObject(0).getString("token");
+                                            String[] token_split = token_string.split("\\.");
+
+                                            String token_decode = new String(Base64.decode(token_split[1].getBytes(), Base64.DEFAULT), "UTF-8");
+                                            JSONObject payload = new JSONObject(token_decode);
+
+                                    }
+                                }
+                            }
+                        }
+                        catch (JSONException e){
+                            Log.e("Events",e.toString());
+                        }
+                        catch (UnsupportedEncodingException e){
+                            Log.e("Events",e.toString());
+                        }
+                        catch (ConnectException e){
+
+                        }
+                });
+
+
+
+
+
                 response=getUserEvents(get_all);
                 break;
 
@@ -791,9 +853,9 @@ public class UserEventsActivity extends ActionBarActivity {
                             break;
                         case 401:
 
-                            ReloginDialog box = relogin();
-                            current_user.curr_token = box.get_token();
-                            current_user.expiration_date = box.get_expiration();
+                            //ReloginDialog box = relogin();
+                            //current_user.curr_token = box.get_token();
+                            //current_user.expiration_date = box.get_expiration();
 
 
                             break;
