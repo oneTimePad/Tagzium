@@ -33,6 +33,8 @@ import java.net.URL;
 
 public class LogSignActivity extends ActionBarActivity {
 
+    Utils utilities;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         getWindow().requestFeature(Window.FEATURE_ACTION_BAR);
@@ -40,6 +42,8 @@ public class LogSignActivity extends ActionBarActivity {
 
         Intent fromMain = getIntent();
         String layout = (String)fromMain.getExtras().get("layout");
+
+        utilities= (Utils)getApplication();
 
         if(layout.equals("signup")){
             setContentView(R.layout.sign_up);
@@ -50,11 +54,11 @@ public class LogSignActivity extends ActionBarActivity {
             final EditText pswd_c = (EditText)findViewById(R.id.password_confirm);
             final  EditText email = (EditText)findViewById(R.id.email_in);
             final EditText name = (EditText)findViewById(R.id.name_in);
-            key_dis(usr);
-            key_dis(pswd);
-            key_dis(pswd_c);
-            key_dis(email);
-            key_dis(name);
+            utilities.key_dis(usr);
+            utilities.key_dis(pswd);
+            utilities.key_dis(pswd_c);
+            utilities.key_dis(email);
+            utilities.key_dis(name);
         }
         else if(layout.equals("login")){
             setContentView(R.layout.log_in);
@@ -62,31 +66,15 @@ public class LogSignActivity extends ActionBarActivity {
             getSupportActionBar().setTitle("User Login");
             final EditText usr = (EditText)findViewById(R.id.username_in);
             final EditText pswd = (EditText)findViewById(R.id.password_in);
-            key_dis(usr);
-            key_dis(pswd);
+            utilities.key_dis(usr);
+            utilities.key_dis(pswd);
         }
 
 
 
     }
 
-    private void key_dis(final EditText edit){
 
-        edit.setOnKeyListener(new View.OnKeyListener() {
-            @Override
-            public boolean onKey(View view, int i, KeyEvent keyEvent) {
-                //on enter
-                if ((keyEvent.getAction() == KeyEvent.ACTION_DOWN) && i == KeyEvent.KEYCODE_ENTER) {
-                    InputMethodManager mgr = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                    //hide the keyboard
-                    mgr.hideSoftInputFromWindow(edit.getWindowToken(), 0);
-                    return true;
-                }
-                return false;
-            }
-        });
-
-    }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -148,6 +136,11 @@ public class LogSignActivity extends ActionBarActivity {
                             public void run() {
                                 ((EditText) findViewById(R.id.password_in)).setText("");
                                 ((EditText) findViewById(R.id.password_confirm)).setText("");
+                                utilities.key_dis((EditText) findViewById(R.id.password_in));
+                                utilities.key_dis((EditText)findViewById(R.id.password_confirm));
+                                utilities.key_dis(((EditText)findViewById(R.id.name_in)));
+                                utilities.key_dis(((EditText)findViewById(R.id.email_in)));
+                                utilities.key_dis(((EditText)findViewById(R.id.username_in)));
                                 setContentView(R.layout.sign_up);
                             }
                         });
@@ -264,6 +257,9 @@ public class LogSignActivity extends ActionBarActivity {
                                         setContentView(R.layout.log_in);
                                         ((EditText) findViewById(R.id.username_in)).setText("");
                                         ((EditText) findViewById(R.id.password_in)).setText("");
+                                        utilities.key_dis(((EditText) findViewById(R.id.username_in)));
+                                        utilities.key_dis(((EditText)findViewById(R.id.password_in)));
+
                                     }
                                 });
                                 break;

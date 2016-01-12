@@ -11,5 +11,6 @@
 
 
     <string name="selectsource"><b>Select Source</b></string>
+    <string name="loading"><b><i>Tagger...</i></b></string>
 
 </resources>

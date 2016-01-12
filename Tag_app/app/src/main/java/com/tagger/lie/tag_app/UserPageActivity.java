@@ -249,10 +249,8 @@ public class UserPageActivity extends ActionBarActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        //Intent load = new Intent(UserPageActivity.this,LoadingScreen.class);
-        //startActivity(load);
-        //setContentView(R.layout.activity_user_page);
         setContentView(R.layout.activity_loading_screen);
+
 
         FetchResources thread = new FetchResources();
         thread.fetch();
