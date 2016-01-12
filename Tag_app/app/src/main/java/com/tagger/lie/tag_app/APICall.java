@@ -32,12 +32,27 @@ public class APICall {
     private HttpURLConnection con;
     JSONObject request;
     Context ctx;
-    boolean connection_status = true;
+    String method;
+    String call;
+    String token = null;
+    boolean once = false;
+
+
+
+    public APICall(Context ctx,String method,String call,JSONObject request){
+            this.ctx = ctx;
+            this.method = method;
+            this.call = call;
+            this.request = request;
+    }
+
 
     private class ConnectThread extends HandlerThread{
 
         Handler mHander;
         boolean Lock;
+        int trys = 0;
+        boolean connection_status;
 
         public ConnectThread(){
             super("ConnectThread");
@@ -51,30 +66,58 @@ public class APICall {
         }
 
 
-        public void connect(final HttpURLConnection con,final JSONObject request){
+        public void connect(){
             mHander.post(new Runnable() {
                 @Override
                 public void run() {
+                    if(trys==4){
+                        connection_status=true;
+                        Lock=false;
+                        return;
+                    }
                     try {
+                       con = (HttpURLConnection)(new URL("http://192.168.1.170:2000"+call).openConnection());
 
-                            con.connect();
 
-                            OutputStream osC = con.getOutputStream();
-                            OutputStreamWriter osW = new OutputStreamWriter(osC, "UTF-8");
-                            osW.write(request.toString());
-                            osW.flush();
-                            osW.close();
+                        con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
 
-                            status = con.getResponseCode();
+                        if(token!=null){
+                            con.setRequestProperty("Authorization",token);
+                        }
 
-                            Lock=false;
+                        con.setDoInput(true);
+                        con.setDoOutput(true);
+                        con.setUseCaches(false);
+
+                        con.setRequestMethod(method);
+
+
+                        con.connect();
+
+                        OutputStream osC = con.getOutputStream();
+                        OutputStreamWriter osW = new OutputStreamWriter(osC, "UTF-8");
+                        osW.write(request.toString());
+                        osW.flush();
+                        osW.close();
+
+                        status = con.getResponseCode();
+
+                        Lock=false;
+                        connection_status=true;
 
 
                     }
                     catch (ConnectException e){
-                        Toast.makeText(ctx, "Failed to Connect to Service", Toast.LENGTH_SHORT).show();
                         connection_status = false;
                         Lock = false;
+                        trys++;
+                        if(!once) {
+                            try {
+                                Thread.sleep(3000);
+                            } catch (InterruptedException v) {
+                                Log.e("APICall", v.toString());
+                            }
+                        }
 
                     }
                     catch (IOException e){
@@ -85,51 +128,39 @@ public class APICall {
         }
     }
 
-    public APICall(Context ctx,String method,String call,JSONObject request){
-        try{
-            con = (HttpURLConnection)(new URL("http://192.168.1.170:2000"+call).openConnection());
 
 
-            con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-            con.setDoInput(true);
-            con.setDoOutput(true);
-            con.setUseCaches(false);
 
-            con.setRequestMethod(method);
-            this.request = request;
-            this.ctx = ctx;
 
-        }
-        catch (ProtocolException e){
-            Log.e("APICall", e.toString());
-        }
-        catch(MalformedURLException e){
-            Log.e("APICall",e.toString());
-        }
-        catch(UnsupportedEncodingException e){
-            Log.e("APICall",e.toString());
-        }
-        catch(IOException e){
-            Log.e("APICall",e.toString());
-        }
-    }
-
-    public void connect() throws ConnectException{
+    public void connect()throws ConnectException{
 
         ConnectThread t = new ConnectThread();
-        t.Lock = true;
-        t.connect(con, request);
-        while(t.isLocked()){
+        t.connection_status=false;
+        while(!t.connection_status){
+            t.Lock = true;
+            t.connect();
+            while(t.isLocked()) {
+
+
+            }
+            if(once){
+                break;
+            }
 
         }
-
-        if(!connection_status){
-            throw new ConnectException("failed to connect");
+        if(t.trys==4 || once){
+            throw new ConnectException();
         }
 
 
 
 
+
+
+    }
+
+    public void tryOnce(){
+        once = true;
     }
 
     public int getStatus(){
@@ -142,7 +173,7 @@ public class APICall {
     public void authenticate(String token,long expiration_date){
 
 
-        con.setRequestProperty("Authorization", "JWT "+token);
+        this.token  ="JWT "+token;
 
 
     }

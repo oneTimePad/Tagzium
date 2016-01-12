@@ -8,6 +8,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -100,96 +102,160 @@ public class UserPageActivity extends ActionBarActivity
 
 
 
+    private class FetchResources extends HandlerThread{
+        Handler mHandler;
+
+        public FetchResources(){
+
+            super("FetchResources");
+            start();
+            mHandler= new Handler(getLooper());
+
+        }
+
+        public void fetch(){
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+
+
+                        shared = UserPageActivity.this.getSharedPreferences("user_pref", MODE_WORLD_READABLE);
+                        if ((UserPageActivity.this.getIntent().getExtras().getString("response").equals("start"))) {
+                            token = shared.getString("Token", null);
+                            expiration = shared.getLong("Expiration", 0);
+
+
+                        } else {
+
+                            JSONObject token_info = new JSONObject((String) UserPageActivity.this.getIntent().getExtras().get("response"));
+
+                            token = (String) token_info.get("token");
+
+                            String[] token_split = token.split("\\.");
+
+                            String token_decode = new String(Base64.decode(token_split[1].getBytes(), Base64.DEFAULT), "UTF-8");
+                            JSONObject payload = new JSONObject(token_decode);
+                            expiration = Long.parseLong(payload.getString("exp"));
+                        }
+
+                        APICall call = new APICall(UserPageActivity.this, "POST", "/users/get_user/", new JSONObject());
+                        call.authenticate(token, expiration);
+
+                        call.connect();
+                        switch (call.getStatus()) {
+
+                            case 200:
+                                JSONArray response = call.getResponse();
+                                current_user = new User(
+                                        response.getJSONObject(0).getString("username"),
+                                        response.getJSONObject(0).getString("email"),
+                                        response.getJSONObject(0).getString("first_name"),
+                                        token,
+                                        expiration
+
+                                );
+                                shared.edit().clear();
+                                shared.edit().apply();
+                                shared.edit().putString("LastUser", current_user.username).commit();
+                                shared.edit().putString("Token", current_user.curr_token).commit();
+                                shared.edit().putLong("Expiration", current_user.expiration_date).commit();
+
+
+
+
+
+
+
+
+
+                                break;
+                            case 401:
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        ReloginBox box = new ReloginBox(UserPageActivity.this);
+                                        box.show(new ArrayList<Object>(), new success_get_user());
+                                    }
+                                });
+
+
+
+                        }
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                setContentView(R.layout.activity_user_page);
+                                Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+                                setSupportActionBar(toolbar);
+
+                                FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+                                fab.setOnClickListener(new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View view) {
+                                        Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+                                                .setAction("Action", null).show();
+                                    }
+                                });
+
+                                DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+                                ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
+                                        UserPageActivity.this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+                                drawer.setDrawerListener(toggle);
+                                toggle.syncState();
+
+                                NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+                                navigationView.setNavigationItemSelectedListener(UserPageActivity.this);
+                                UserPageActivity.this.onResume();
+                            }
+
+                        });
+
+                    }
+                    catch (ConnectException e) {
+                        logout();
+                        Toast.makeText(UserPageActivity.this, "Server Connection Failed", Toast.LENGTH_SHORT).show();
+                    }
+                    catch (JSONException e){
+                        Log.e("User",e.toString());
+                    }
+                    catch(UnsupportedEncodingException e) {
+                        Log.e("User", e.toString());
+                    }
+
+                }
+
+
+
+
+
+            });
+
+
+
+
+
+
+        }
+
+
+
+    }
+
+
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_user_page);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
+        //Intent load = new Intent(UserPageActivity.this,LoadingScreen.class);
+        //startActivity(load);
+        //setContentView(R.layout.activity_user_page);
+        setContentView(R.layout.activity_loading_screen);
 
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-        drawer.setDrawerListener(toggle);
-        toggle.syncState();
-
-        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
-        navigationView.setNavigationItemSelectedListener(this);
-
-        Intent fromLogSign = getIntent();
-
-
-        try {
-
-
-            shared = this.getSharedPreferences("user_pref", MODE_WORLD_READABLE);
-            if ((fromLogSign.getExtras().getString("response").equals("start"))) {
-                token = shared.getString("Token", null);
-                expiration = shared.getLong("Expiration", 0);
-
-
-            } else {
-
-                JSONObject token_info = new JSONObject((String) fromLogSign.getExtras().get("response"));
-
-                token = (String) token_info.get("token");
-
-                String[] token_split = token.split("\\.");
-
-                String token_decode = new String(Base64.decode(token_split[1].getBytes(), Base64.DEFAULT), "UTF-8");
-                JSONObject payload = new JSONObject(token_decode);
-                expiration = Long.parseLong(payload.getString("exp"));
-            }
-
-            APICall call = new APICall(UserPageActivity.this, "POST", "/users/get_user/", new JSONObject());
-            //call.authenticate(token, expiration);
-
-            call.connect();
-            switch (call.getStatus()) {
-
-                case 200:
-                    JSONArray response = call.getResponse();
-                    current_user = new User(
-                            response.getJSONObject(0).getString("username"),
-                            response.getJSONObject(0).getString("email"),
-                            response.getJSONObject(0).getString("first_name"),
-                            token,
-                            expiration
-
-                    );
-                    shared.edit().clear();
-                    shared.edit().apply();
-                    shared.edit().putString("LastUser", current_user.username).commit();
-                    shared.edit().putString("Token", current_user.curr_token).commit();
-                    shared.edit().putLong("Expiration", current_user.expiration_date).commit();
-                    break;
-                case 401:
-                    ReloginBox box = new ReloginBox(UserPageActivity.this);
-                    box.show(new ArrayList<Object>(),new success_get_user());
-
-
-            }
-        }
-        catch (ConnectException e) {
-        }
-        catch (JSONException e){
-            Log.e("User",e.toString());
-        }
-        catch(UnsupportedEncodingException e) {
-            Log.e("User", e.toString());
-        }
-
-
-
+        FetchResources thread = new FetchResources();
+        thread.fetch();
 
     }
 
@@ -206,7 +272,9 @@ public class UserPageActivity extends ActionBarActivity
     public  void onResume(){
         super.onResume();
         if(current_user!=null) {
-            getSupportActionBar().setTitle(current_user.first_name);
+            if(current_user.first_name!=null) {
+                getSupportActionBar().setTitle(current_user.first_name);
+            }
         }
     }
 

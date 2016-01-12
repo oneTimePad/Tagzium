@@ -102,14 +102,23 @@ public class LogSignActivity extends ActionBarActivity {
     }
 
     public void signup_confirm(View view){
-        new signUpConnect().connect();
+        String username = ((EditText)findViewById(R.id.username_in)).getText().toString();
+        String password = ((EditText)findViewById(R.id.password_in)).getText().toString();
+        String password_cf = ((EditText)findViewById(R.id.password_confirm)).getText().toString();
+        String email =  ((EditText)findViewById(R.id.email_in)).getText().toString();
+        String name =  ((EditText)findViewById(R.id.name_in)).getText().toString();
+        setContentView(R.layout.activity_loading_screen);
+        new signUpConnect().connect(username,password,password_cf,email,name);
 
     }
 
 
     public void login_confirm(View view){
+        String username = ((EditText)findViewById(R.id.username_in)).getText().toString();
+        String password = ((EditText)findViewById(R.id.password_in)).getText().toString();
+        setContentView(R.layout.activity_loading_screen);
+        new logInConnect().connect(username,password);
 
-        new logInConnect().connect();
 
     }
 
@@ -125,15 +134,12 @@ public class LogSignActivity extends ActionBarActivity {
 
         }
 
-        public void connect(){
+        public void connect(final String username, final String password, final String password_cf,
+                            final String email, final String name){
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
-                    String username = ((EditText)findViewById(R.id.username_in)).getText().toString();
-                    String password = ((EditText)findViewById(R.id.password_in)).getText().toString();
-                    String password_cf = ((EditText)findViewById(R.id.password_confirm)).getText().toString();
-                    String email =  ((EditText)findViewById(R.id.email_in)).getText().toString();
-                    String name =  ((EditText)findViewById(R.id.name_in)).getText().toString();
+
 
                     if(!password.equals(password_cf)){
                         Toast.makeText(LogSignActivity.this, "Passwords Don't Match", Toast.LENGTH_LONG).show();
@@ -142,6 +148,7 @@ public class LogSignActivity extends ActionBarActivity {
                             public void run() {
                                 ((EditText) findViewById(R.id.password_in)).setText("");
                                 ((EditText) findViewById(R.id.password_confirm)).setText("");
+                                setContentView(R.layout.sign_up);
                             }
                         });
 
@@ -205,13 +212,12 @@ public class LogSignActivity extends ActionBarActivity {
             mHandler = new Handler(getLooper());
         }
 
-        public void connect(){
+        public void connect(final String username,final String password){
 
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
-                    String username = ((EditText)findViewById(R.id.username_in)).getText().toString();
-                    String password = ((EditText)findViewById(R.id.password_in)).getText().toString();
+
 
 
 
@@ -255,6 +261,7 @@ public class LogSignActivity extends ActionBarActivity {
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
+                                        setContentView(R.layout.log_in);
                                         ((EditText) findViewById(R.id.username_in)).setText("");
                                         ((EditText) findViewById(R.id.password_in)).setText("");
                                     }

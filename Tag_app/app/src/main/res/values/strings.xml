@@ -10,7 +10,6 @@
     <string name="action_events">Events</string>
 
 
-
-        <string name="selectsource"><b>Select Source</b></string>
+    <string name="selectsource"><b>Select Source</b></string>
 
 </resources>

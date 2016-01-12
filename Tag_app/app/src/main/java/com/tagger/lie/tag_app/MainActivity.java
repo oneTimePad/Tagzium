@@ -42,65 +42,23 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
 
 
-
+        Utils utilities = (Utils)getApplication();
 
 
         SharedPreferences pref= this.getSharedPreferences("user_pref", MODE_WORLD_READABLE);
         String username = pref.getString("LastUser", null);
-        String token = pref.getString("Token",null);
+        String token = pref.getString("Token", null);
         Long expiration = pref.getLong("Expiration",0);
 
 
         if(username==null){
-
+            setContentView(R.layout.activity_main);
             return;
         }
 
-
-
-
-        Long unixtime=System.currentTimeMillis()/1000;
-
-        if(expiration-unixtime<=300){
-            try {
-                JSONObject request_refresh = new JSONObject();
-                request_refresh.put("token", token);
-                APICall call_refresh = new APICall(MainActivity.this, "POST", "/auth/refresh",request_refresh );
-                call_refresh.connect();
-                switch (call_refresh.getStatus()){
-                    case 200:
-                        JSONArray response_refresh = call_refresh.getResponse();
-
-                        token = response_refresh.getJSONObject(0).getString("token");
-
-                        String[] token_split = token.split("\\.");
-
-                        String token_decode = new String(Base64.decode(token_split[1].getBytes(), Base64.DEFAULT), "UTF-8");
-                        JSONObject payload = new JSONObject(token_decode);
-                        expiration=Long.parseLong(payload.getString("exp"));
-
-                        pref.edit().putString("Token", token);
-                        pref.edit().putLong("Expiration",expiration);
-                    default:
-                        break;
-                }
-
-            }
-
-            catch (ConnectException e){
-
-            }
-            catch (UnsupportedEncodingException e){
-                Log.e("Main",e.toString());
-            }
-            catch (JSONException e){
-                Log.e("Main",e.toString());
-            }
-        }
-
+        utilities.refresh_token(MainActivity.this,expiration,token,pref);
 
         Intent toUserPage = new Intent(MainActivity.this,UserPageActivity.class);
 

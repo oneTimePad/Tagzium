@@ -96,53 +96,9 @@ public class UserEventsActivity extends ActionBarActivity {
 
     Dialog chosenDialog;
 
+    Utils utilities;
 
 
-
-
-    private void key_dis(final EditText edit) {
-
-        edit.setOnKeyListener(new View.OnKeyListener() {
-            @Override
-            public boolean onKey(View view, int i, KeyEvent keyEvent) {
-                //on enter
-                if ((keyEvent.getAction() == KeyEvent.ACTION_DOWN) && i == KeyEvent.KEYCODE_ENTER) {
-                    InputMethodManager mgr = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                    //hide the keyboard
-                    mgr.hideSoftInputFromWindow(edit.getWindowToken(), 0);
-                    return true;
-                }
-                return false;
-            }
-        });
-
-    }
-    /*
-    private  ReloginDialog relogin(){
-
-            boolean return_val = false;
-            int trys = 0;
-            ReloginDialog box=null;
-            while(!return_val) {
-                if (trys == 3) {
-                    SharedPreferences shared = this.getSharedPreferences("user_pref", MODE_WORLD_READABLE);
-                    shared.edit().remove("LastUser");
-                    shared.edit().remove("Token");
-                    shared.edit().remove("Expiration");
-                    Intent logout = new Intent(UserEventsActivity.this, MainActivity.class);
-                    startActivity(logout);
-                    finish();
-                }
-                box = new ReloginDialog(UserEventsActivity.this);
-                return_val = box.alert();
-                trys++;
-
-            }
-        Toast.makeText(UserEventsActivity.this,"Session Restored",Toast.LENGTH_SHORT).show();
-            return box;
-
-
-    }*/
 
     private void refresh(){
         if(current_user.expiration_date-(System.currentTimeMillis()/1000)<=300){
@@ -196,6 +152,8 @@ public class UserEventsActivity extends ActionBarActivity {
         setContentView(R.layout.activity_user_events);
         Intent intent = getIntent();
         main_layout = ((RelativeLayout)findViewById(R.id.events));
+
+        utilities = (Utils)getApplication();
 
 
         if(savedInstanceState!=null){
@@ -417,9 +375,8 @@ public class UserEventsActivity extends ActionBarActivity {
                 return null;
             }
         }
-
         APICall getEvents = new APICall(getApplicationContext(), "POST", "/events/retrieve_users/", request);
-        refresh();
+        utilities.refresh_token(UserEventsActivity.this,current_user.expiration_date,current_user.curr_token,getSharedPreferences("user_pref",MODE_WORLD_READABLE));
         getEvents.authenticate(current_user.curr_token,current_user.expiration_date);
 
         try {
@@ -656,7 +613,8 @@ public class UserEventsActivity extends ActionBarActivity {
         params_o.addRule(RelativeLayout.CENTER_HORIZONTAL);
         event_name.setHint("Event Name");
         event_name.setId(new Integer(1));
-        key_dis(event_name);
+        utilities.key_dis(event_name);
+
 
 
         Button selectLogo = new Button(this);
