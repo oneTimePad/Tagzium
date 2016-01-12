@@ -26,6 +26,8 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
@@ -51,6 +53,8 @@ public class UserPageActivity extends ActionBarActivity
 
     String token=null;
     Long expiration=null;
+
+
 
 
     private class success_get_user implements ReloginBox.Callback{
@@ -164,7 +168,12 @@ public class UserPageActivity extends ActionBarActivity
 
 
 
-
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        onResume();
+                                    }
+                                });
 
 
 
@@ -175,6 +184,9 @@ public class UserPageActivity extends ActionBarActivity
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
+                                        ((View)findViewById(R.id.logo)).setVisibility(View.GONE);
+                                        ((View)findViewById(R.id.progress)).setVisibility(View.GONE);
+                                        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
                                         ReloginBox box = new ReloginBox(UserPageActivity.this);
                                         box.show(new ArrayList<Object>(), new success_get_user());
                                     }
@@ -183,34 +195,16 @@ public class UserPageActivity extends ActionBarActivity
 
 
                         }
+
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                setContentView(R.layout.activity_user_page);
-                                Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-                                setSupportActionBar(toolbar);
-
-                                FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-                                fab.setOnClickListener(new View.OnClickListener() {
-                                    @Override
-                                    public void onClick(View view) {
-                                        Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                                                .setAction("Action", null).show();
-                                    }
-                                });
-
-                                DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-                                ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                                        UserPageActivity.this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-                                drawer.setDrawerListener(toggle);
-                                toggle.syncState();
-
-                                NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
-                                navigationView.setNavigationItemSelectedListener(UserPageActivity.this);
-                                UserPageActivity.this.onResume();
+                                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+                                ((View) findViewById(R.id.logo)).setVisibility(View.GONE);
+                                ((View) findViewById(R.id.progress)).setVisibility(View.GONE);
                             }
-
                         });
+
 
                     }
                     catch (ConnectException e) {
@@ -248,13 +242,37 @@ public class UserPageActivity extends ActionBarActivity
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+       // getWindow().requestFeature(Window.FEATURE_ACTION_BAR);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
         super.onCreate(savedInstanceState);
-
-        setContentView(R.layout.activity_loading_screen);
-
+        setContentView(R.layout.activity_user_page);
 
         FetchResources thread = new FetchResources();
         thread.fetch();
+
+
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+
+        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+                        .setAction("Action", null).show();
+            }
+        });
+
+        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
+                UserPageActivity.this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+        drawer.setDrawerListener(toggle);
+        toggle.syncState();
+
+        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+        navigationView.setNavigationItemSelectedListener(UserPageActivity.this);
+        UserPageActivity.this.onResume();
 
     }
 
@@ -273,8 +291,10 @@ public class UserPageActivity extends ActionBarActivity
         if(current_user!=null) {
             if(current_user.first_name!=null) {
                 getSupportActionBar().setTitle(current_user.first_name);
+                return;
             }
         }
+        getSupportActionBar().setTitle("Loading...");
     }
 
     public void logout_alert(){

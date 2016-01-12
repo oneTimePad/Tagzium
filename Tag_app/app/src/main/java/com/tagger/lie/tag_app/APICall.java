@@ -37,6 +37,9 @@ public class APICall {
     String token = null;
     boolean once = false;
 
+    final int TIMEOUT=10;
+    final int TRYTIME=2000;
+
 
 
     public APICall(Context ctx,String method,String call,JSONObject request){
@@ -70,7 +73,7 @@ public class APICall {
             mHander.post(new Runnable() {
                 @Override
                 public void run() {
-                    if(trys==4){
+                    if(trys==TIMEOUT){
                         connection_status=true;
                         Lock=false;
                         return;
@@ -113,7 +116,7 @@ public class APICall {
                         trys++;
                         if(!once) {
                             try {
-                                Thread.sleep(3000);
+                                Thread.sleep(TRYTIME);
                             } catch (InterruptedException v) {
                                 Log.e("APICall", v.toString());
                             }
@@ -148,7 +151,7 @@ public class APICall {
             }
 
         }
-        if(t.trys==4 || once){
+        if(t.trys==TIMEOUT || once){
             throw new ConnectException();
         }
 

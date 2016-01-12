@@ -69,6 +69,7 @@ import java.lang.reflect.Array;
 import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class UserEventsActivity extends ActionBarActivity {
 
@@ -708,7 +709,7 @@ public class UserEventsActivity extends ActionBarActivity {
 
 
                     APICall eC = new APICall(getApplicationContext(), "POST", "/events/creates/", request);
-                    //refresh(eC);
+                    utilities.refresh_token(UserEventsActivity.this,current_user.expiration_date,current_user.curr_token,getSharedPreferences("user_pref",MODE_WORLD_READABLE));
                     try {
                         eC.connect();
                     } catch (ConnectException e) {
@@ -723,10 +724,16 @@ public class UserEventsActivity extends ActionBarActivity {
                             break;
                         case 401:
 
-                            //ReloginDialog box = relogin();
-                            //current_user.curr_token = box.get_token();
-                            //current_user.expiration_date = box.get_expiration();
-
+                            class CreateCallback implements ReloginBox.Callback{
+                                public Object success(ArrayList<Object> args, String token,Long expiration){
+                                    return null;
+                                }
+                                public Object failure(ArrayList<Object> args,String token,Long expiration){
+                                    return null;
+                                }
+                            }
+                            ReloginBox box = new ReloginBox(UserEventsActivity.this);
+                            box.show(new ArrayList<Object>(), new CreateCallback());
 
                             break;
                         default:
