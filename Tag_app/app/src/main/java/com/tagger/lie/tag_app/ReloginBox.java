@@ -26,8 +26,10 @@ import java.util.ArrayList;
 public class ReloginBox {
 
     Context ctx;
+    boolean Lock = false;
 
     int log_count=0;
+    Object return_val;
 
     public ReloginBox(Context ctx){
         this.ctx =  ctx;
@@ -37,12 +39,20 @@ public class ReloginBox {
 
 
     public interface Callback {
-        void success(ArrayList<Object> args,String token,Long expiration);
-        void failure(ArrayList<Object> args,String token,Long expiration);
+        Object success(ArrayList<Object> args,String token,Long expiration);
+        Object failure(ArrayList<Object> args,String token,Long expiration);
+    }
+
+    public synchronized boolean isLocked(){
+        return Lock;
+    }
+    public Object get_return(){
+        return return_val;
     }
 
 
     public void show(final ArrayList<Object> args,final Callback fct) {
+        Lock=true;
         Toast.makeText(ctx, "Session Expired", Toast.LENGTH_SHORT).show();
         final Dialog relogin = new Dialog(ctx);
         relogin.setCancelable(false);
@@ -69,6 +79,7 @@ public class ReloginBox {
         submit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
                 for (View view : parents) {
                     view.setVisibility(View.GONE);
                 }
@@ -99,9 +110,10 @@ public class ReloginBox {
                                     expiration = Long.parseLong(payload.getString("exp"));
 
 
-                                    fct.success(args, token, expiration);
+                                    return_val =fct.success(args, token, expiration);
 
                                     relogin.hide();
+                                    Lock=false;
                                     log_count = 0;
                                     break;
                                 case 400:
@@ -113,7 +125,9 @@ public class ReloginBox {
                                     log_count++;
                                     if (log_count == 3) {
                                         fct.failure(args, token, expiration);
+                                        Lock=false;
                                     }
+
 
 
                                 default:

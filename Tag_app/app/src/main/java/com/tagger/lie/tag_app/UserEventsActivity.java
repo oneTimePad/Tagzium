@@ -98,51 +98,8 @@ public class UserEventsActivity extends ActionBarActivity {
 
     Utils utilities;
 
+    boolean get_all=false;
 
-
-    private void refresh(){
-        if(current_user.expiration_date-(System.currentTimeMillis()/1000)<=300){
-
-            JSONObject request = new JSONObject();
-            try {
-                request.put("token", current_user.curr_token);
-
-                APICall call = new APICall(UserEventsActivity.this, "POST", "/auth/refresh", request);
-                call.connect();
-                switch (call.getStatus()){
-                    case 200:
-                        JSONArray response = call.getResponse();
-                        String token = response.getJSONObject(0).getString("token");
-
-                        String[] token_split = token.split("\\.");
-
-                        String token_decode = new String(Base64.decode(token_split[1].getBytes(), Base64.DEFAULT), "UTF-8");
-                        JSONObject payload = new JSONObject(token_decode);
-
-                        current_user.curr_token=token;
-                        current_user.expiration_date=payload.getLong("exp");
-                        SharedPreferences shared = this.getSharedPreferences("user_pref", MODE_WORLD_READABLE);
-                        shared.edit().remove("Token");
-                        shared.edit().remove("Expiration");
-                        shared.edit().putString("Token", current_user.curr_token);
-                        shared.edit().putLong("Expiration",current_user.expiration_date);
-
-
-                }
-
-            }
-            catch (ConnectException e){
-
-
-            }
-            catch (JSONException e){
-                Log.e("Events",e.toString());
-            }
-            catch (UnsupportedEncodingException e){
-                Log.e("Events",e.toString());
-            }
-        }
-    }
 
 
     @Override
@@ -190,12 +147,13 @@ public class UserEventsActivity extends ActionBarActivity {
         ab.setTitle(current_user.first_name + "\'s Events");
         ab.setDisplayHomeAsUpEnabled(true);
 
-
+        setContentView(R.layout.activity_loading_screen);
         JSONArray events = null;
         try {
 
             if (current_user.events == null) {
-                events = getUserEvents(true);
+                get_all=true;
+                events = getUserEvents();
                 if(events!=null) {
                     current_user.events = events.toString();
                 }
@@ -208,7 +166,7 @@ public class UserEventsActivity extends ActionBarActivity {
 
 
 
-
+        setContentView(R.layout.activity_user_events);
 
         parents = new ArrayList<View>();
         final SwipeRefreshLayout refresh_layout = new SwipeRefreshLayout(this);
@@ -223,7 +181,8 @@ public class UserEventsActivity extends ActionBarActivity {
             @Override
             public void onRefresh() {
                 refresh_layout.setRefreshing(true);
-                JSONArray events = getUserEvents(false);
+                get_all=false;
+                JSONArray events = getUserEvents();
                 if (events == null) {
                     refresh_layout.setRefreshing(false);
                     return;
@@ -362,7 +321,18 @@ public class UserEventsActivity extends ActionBarActivity {
     }
 
 
-    private JSONArray getUserEvents(boolean get_all) {
+    private class on_callback_events implements ReloginBox.Callback{
+        public Object success(ArrayList<Object> args,String token,Long expiration){
+           return getUserEvents();
+
+        }
+
+        public Object failure(ArrayList<Object>args, String token,Long expiration){
+            return null;
+        }
+    }
+
+    private JSONArray getUserEvents() {
 
         JSONObject request =new JSONObject();
 
@@ -393,72 +363,14 @@ public class UserEventsActivity extends ActionBarActivity {
                 break;
             case 401:
                 Log.e("Status", "denied");
-                /*
-                Dialog relogin = new Dialog(this);
-                final EditText username = new EditText(this);
-                final EditText password = new EditText(this);
-                username.setHint("username");
-                password.setHint("password");
-                final Button submit = new Button(this);
-                submit.setText("Login");
+                ReloginBox box = new ReloginBox(UserEventsActivity.this);
+                box.show(new ArrayList<Object>(),new on_callback_events());
+                box.Lock=true;
+                while(box.isLocked()){
 
-                final ProgressBar progress = new ProgressBar(this);
-                progress.setVisibility(View.GONE);
+                }
+                response=(JSONArray)box.get_return();
 
-                final ArrayList<View> parents = new ArrayList<>();
-                parents.add(username);
-                parents.add(password);
-                parents.add(submit);
-
-                submit.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        for(View view: parents){
-                            view.setVisibility(View.GONE);
-                        }
-                        progress.setVisibility(View.VISIBLE);
-
-                        JSONObject request = new JSONObject();
-                        try {
-                            if (!(username.getText().equals(""))) {
-                                request.put("username", username.getText());
-                                if (!(password.getText().equals(""))) {
-                                    request.put("password", password.getText());
-
-                                    APICall call = new APICall(UserEventsActivity.this, "POST", "/auth/login", request);
-                                    call.connect();
-
-
-                                    switch (call.getStatus()) {
-                                        case 200:
-
-                                            JSONArray response = call.getResponse();
-                                            String token_string = response.getJSONObject(0).getString("token");
-                                            String[] token_split = token_string.split("\\.");
-
-                                            String token_decode = new String(Base64.decode(token_split[1].getBytes(), Base64.DEFAULT), "UTF-8");
-                                            JSONObject payload = new JSONObject(token_decode);
-
-                                    }
-                                }
-                            }
-                        }
-                        catch (JSONException e){
-                            Log.e("Events",e.toString());
-                        }
-                        catch (UnsupportedEncodingException e){
-                            Log.e("Events",e.toString());
-                        }
-                        catch (ConnectException e){
-
-                        }
-                });
-
-
-                */
-
-
-                response=getUserEvents(get_all);
                 break;
 
             default:
