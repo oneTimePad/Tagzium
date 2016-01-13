@@ -148,27 +148,6 @@ public class UserEventsActivity extends ActionBarActivity {
         ab.setTitle(current_user.first_name + "\'s Events");
         ab.setDisplayHomeAsUpEnabled(true);
 
-        //setContentView(R.layout.activity_loading_screen);
-        JSONArray events = null;
-        try {
-
-            if (current_user.events == null) {
-                get_all=true;
-                events = getUserEvents();
-                if(events!=null) {
-                    current_user.events = events.toString();
-                }
-            } else {
-                events = new JSONArray(current_user.events);
-            }
-        } catch (JSONException e) {
-            Log.e("Event", e.toString());
-        }
-
-
-
-        //setContentView(R.layout.activity_user_events);
-
         parents = new ArrayList<View>();
         final SwipeRefreshLayout refresh_layout = new SwipeRefreshLayout(this);
         parents.add(refresh_layout);
@@ -178,6 +157,73 @@ public class UserEventsActivity extends ActionBarActivity {
         final LinearLayout linear_layout = new LinearLayout(this);
         linear_layout.setOrientation(LinearLayout.VERTICAL);
         scroll.addView(linear_layout, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        final ProgressBar progress_bar = new ProgressBar(this);
+        RelativeLayout.LayoutParams prog_params = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,RelativeLayout.LayoutParams.WRAP_CONTENT);
+        prog_params.addRule(RelativeLayout.CENTER_IN_PARENT,RelativeLayout.TRUE);
+        main_layout.addView(progress_bar, prog_params);
+        progress_bar.setVisibility(View.VISIBLE);
+        new Thread(){
+            public void run(){
+                JSONArray events = null;
+                try {
+
+                    if (current_user.events == null) {
+                        get_all=true;
+
+                        events = getUserEvents();
+                        if(events!=null) {
+                            current_user.events = events.toString();
+                        }
+                    } else {
+                        events = new JSONArray(current_user.events);
+                    }
+                } catch (JSONException e) {
+                    Log.e("Event", e.toString());
+                }
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        progress_bar.setVisibility(View.GONE);
+                    }
+                });
+
+                if (events == null) {
+                    return;
+                }
+                for (int i = 0; i < events.length(); i++) {
+                    try {
+                        final JSONObject events_ser = events.getJSONObject(i);
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    TextView evV = new TextView(UserEventsActivity.this);
+                                    evV.setText(events_ser.get("event_name").toString());
+                                    linear_layout.addView(evV);
+                                }
+                                catch (JSONException e){
+                                    Log.e("Events Thread",e.toString());
+                                }
+                            }
+                        });
+
+                    } catch (JSONException e) {
+                        Log.e("Events", e.toString());
+                    }
+
+
+                }
+
+
+            }
+        }.start();
+
+
+
+        //setContentView(R.layout.activity_user_events);
+
+
         refresh_layout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
@@ -213,19 +259,7 @@ public class UserEventsActivity extends ActionBarActivity {
         });
 
 
-        if (events == null) {
-            return;
-        }
-        for (int i = 0; i < events.length(); i++) {
-            try {
-                JSONObject events_ser = events.getJSONObject(i);
-                TextView evV = new TextView(this);
-                evV.setText(events_ser.get("event_name").toString());
-                linear_layout.addView(evV);
-            } catch (JSONException e) {
-                Log.e("Events", e.toString());
-            }
-        }
+
         if(savedInstanceState!=null){
 
             try{
