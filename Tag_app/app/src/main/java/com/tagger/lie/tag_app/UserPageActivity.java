@@ -68,10 +68,22 @@ public class UserPageActivity extends ActionBarActivity
                call.connect();
                switch (call.getStatus()) {
                    case 401:
-                       Toast.makeText(UserPageActivity.this, "Error restoring session", Toast.LENGTH_SHORT).show();
-                       logout();
+                       runOnUiThread(new Runnable() {
+                           @Override
+                           public void run() {
+                               Toast.makeText(UserPageActivity.this, "Error restoring session", Toast.LENGTH_SHORT).show();
+                               logout();
+                           }
+                       });
+
                }
-               Toast.makeText(UserPageActivity.this, "Session Restored", Toast.LENGTH_SHORT).show();
+               runOnUiThread(new Runnable() {
+                   @Override
+                   public void run() {
+                       Toast.makeText(UserPageActivity.this, "Session Restored", Toast.LENGTH_SHORT).show();
+                   }
+               });
+
 
 
                JSONArray response = call.getResponse();
@@ -87,7 +99,13 @@ public class UserPageActivity extends ActionBarActivity
                shared.edit().apply();
                shared.edit().putString("LastUser", current_user.username).commit();
                shared.edit().putString("Token", current_user.curr_token).commit();
-               onResume();
+               runOnUiThread(new Runnable() {
+                   @Override
+                   public void run() {
+                       onResume();
+                   }
+               });
+
            }
            catch (ConnectException e){
 
@@ -187,10 +205,11 @@ public class UserPageActivity extends ActionBarActivity
                                         ((View)findViewById(R.id.logo)).setVisibility(View.GONE);
                                         ((View)findViewById(R.id.progress)).setVisibility(View.GONE);
                                         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
-                                        ReloginBox box = new ReloginBox(UserPageActivity.this);
-                                        box.show(new ArrayList<Object>(), new success_get_user());
+
                                     }
                                 });
+                                ReloginBox box = new ReloginBox(UserPageActivity.this);
+                                box.show(new ArrayList<Object>(), new success_get_user());
 
 
 
@@ -200,8 +219,8 @@ public class UserPageActivity extends ActionBarActivity
                             @Override
                             public void run() {
                                 getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
-                                ((View) findViewById(R.id.logo)).setVisibility(View.GONE);
-                                ((View) findViewById(R.id.progress)).setVisibility(View.GONE);
+                                ((TextView) findViewById(R.id.logo)).setVisibility(View.GONE);
+                                ((ProgressBar) findViewById(R.id.progress)).setVisibility(View.GONE);
                             }
                         });
 
@@ -242,7 +261,7 @@ public class UserPageActivity extends ActionBarActivity
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-       // getWindow().requestFeature(Window.FEATURE_ACTION_BAR);
+
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
                 WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
         super.onCreate(savedInstanceState);
@@ -254,7 +273,7 @@ public class UserPageActivity extends ActionBarActivity
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
+        /*
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -262,7 +281,7 @@ public class UserPageActivity extends ActionBarActivity
                 Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
             }
-        });
+        });*/
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(

@@ -148,7 +148,7 @@ public class UserEventsActivity extends ActionBarActivity {
         ab.setTitle(current_user.first_name + "\'s Events");
         ab.setDisplayHomeAsUpEnabled(true);
 
-        setContentView(R.layout.activity_loading_screen);
+        //setContentView(R.layout.activity_loading_screen);
         JSONArray events = null;
         try {
 
@@ -167,7 +167,7 @@ public class UserEventsActivity extends ActionBarActivity {
 
 
 
-        setContentView(R.layout.activity_user_events);
+        //setContentView(R.layout.activity_user_events);
 
         parents = new ArrayList<View>();
         final SwipeRefreshLayout refresh_layout = new SwipeRefreshLayout(this);
@@ -182,16 +182,33 @@ public class UserEventsActivity extends ActionBarActivity {
             @Override
             public void onRefresh() {
                 refresh_layout.setRefreshing(true);
-                get_all=false;
-                JSONArray events = getUserEvents();
-                if (events == null) {
-                    refresh_layout.setRefreshing(false);
-                    return;
-                }
-                onRefreshEvents(events, linear_layout);
-                refresh_layout.setRefreshing(false);
+
+                new Thread(){
+                    public void run(){
+                        get_all=false;
+                        final JSONArray events = getUserEvents();
+                        if (events == null) {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    refresh_layout.setRefreshing(false);
+                                }
+                            });
+
+                        }
+                        else{
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    onRefreshEvents(events, linear_layout);
+                                    refresh_layout.setRefreshing(false);
+                                }
+                            });
+                        }
 
 
+                    }
+                }.start();
             }
         });
 
