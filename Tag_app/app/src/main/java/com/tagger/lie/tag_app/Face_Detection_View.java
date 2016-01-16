@@ -8,6 +8,7 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PointF;
+import android.hardware.camera2.params.Face;
 import android.media.ExifInterface;
 import android.media.FaceDetector;
 import android.os.Environment;
@@ -65,18 +66,17 @@ class Face_Detection_View extends View {
             switch (orientation) {
                 case ExifInterface.ORIENTATION_ROTATE_270:
 
-                    background_image=rotateImage(background_image, 270);
+                    background_image = rotateImage(background_image, 270);
                     break;
 
                 // etc.
             }
+        } catch (IOException e) {
+            Log.e("FaceDetector", e.toString());
         }
-        catch(IOException e){
-            Log.e("FaceDetector",e.toString());
-        }
+    }
 
-
-
+    public FaceDetector.Face[] detect(){
 
         FaceDetector face_detector = new FaceDetector(
                 background_image.getWidth(), background_image.getHeight(),
@@ -86,6 +86,17 @@ class Face_Detection_View extends View {
         // The bitmap must be in 565 format (for now).
         face_count = face_detector.findFaces(background_image, faces);
         Log.e("Face_Detection", "Face Count: " + String.valueOf(face_count));
+
+        return  faces;
+    }
+
+    public int getFaceCount(){
+        return face_count;
+    }
+
+    public void setFaces(FaceDetector.Face[] faces,int face_count) {
+        this.faces = faces;
+        this.face_count = face_count;
     }
 
     public void onDraw(Canvas canvas) {

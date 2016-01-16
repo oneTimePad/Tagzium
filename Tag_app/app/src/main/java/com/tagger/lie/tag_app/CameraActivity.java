@@ -291,7 +291,7 @@ public class CameraActivity extends AppCompatActivity {
                     exif.saveAttributes();
 
                 }
-               
+
             }
             catch (FileNotFoundException e){
                 Log.e("Pic Callback",e.toString());

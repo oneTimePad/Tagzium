@@ -775,8 +775,9 @@ public class UserEventsActivity extends ActionBarActivity {
                     }
 
 
-                    APICall eC = new APICall(getApplicationContext(), "POST", "/events/creates/", request);
+                    APICall eC = new APICall(getApplicationContext(), "POST", "/events/create", request);
                     utilities.refresh_token(UserEventsActivity.this,current_user.expiration_date,current_user.curr_token,getSharedPreferences("user_pref",MODE_WORLD_READABLE));
+                    eC.authenticate(current_user.curr_token,current_user.expiration_date);
                     try {
                         eC.connect();
                     } catch (ConnectException e) {

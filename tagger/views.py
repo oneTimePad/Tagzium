@@ -149,8 +149,7 @@ class EventViewSet(viewsets.ModelViewSet):
     serializer_class = EventSerializer
 
     def create(self,request):
-        if request.method is not 'POST':
-            return Response('Requires POST',status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        
 
         if not event.is_valid():
             return Response(event.errors,status=status.HTTP_400_BAD_REQUEST)
