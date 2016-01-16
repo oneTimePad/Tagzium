@@ -73,6 +73,8 @@ class UserViewSet(viewsets.ModelViewSet):
         authentication_classes = (JSONWebTokenAuthentication,)
         permission_classes = (IsAuthenticated,)
 
+        #no logout protection right now
+        #not necessary right now
         @list_route(methods=['post'])
         def logout(self,request,pk=None):
             request.user.user_token.delete()
@@ -145,24 +147,23 @@ class EventViewSet(viewsets.ModelViewSet):
     authentication_classes = (JSONWebTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
     serializer_class = EventSerializer
-    @list_route(methods=['post'])
-    def creates(self,request):
 
-        input = {'event_name':request.data['event_name'],'creator':request.user.pk}
-        event=EventSerializer(data=input)
-        image = PictureSerializer(data={'photo':request.data['initial_image']})
-        if image.is_valid() and image.valid():
-            image.event=event
-            image.save()
-        else:
-            return Response("Invalid File",status=status.HTTP_400_BAD_REQUEST)
+    def create(self,request):
+        if request.method is not 'POST':
+            return Response('Requires POST',status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
         if not event.is_valid():
             return Response(event.errors,status=status.HTTP_400_BAD_REQUEST)
         event = event.create()
         event.save()
-
         return Response({'Status':'Success'})
+
+    def post_image_data(self,request):
+        pass
+
+    def put_image_file(self,request):
+        pass
+
     @list_route(methods=['post'])
     def retrieve_users(self,request):
 

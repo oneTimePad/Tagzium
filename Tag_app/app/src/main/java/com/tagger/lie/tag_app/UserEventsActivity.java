@@ -101,6 +101,9 @@ public class UserEventsActivity extends ActionBarActivity {
 
     boolean get_all=false;
 
+    final int IMAGE_GETTER = 2;
+    final int IMAGE_CREATE =3;
+
 
 
     @Override
@@ -304,41 +307,54 @@ public class UserEventsActivity extends ActionBarActivity {
     }
 
     protected  void onActivityResult(int requestCode, int resultCode,Intent data){
-        if(data==null){
-            return;
-        }
-        Uri photoUri= data.getData();//.substring(data.getDataString().indexOf('/'),data.getDataString().length());
         String photo;
-        if(photoUri!=null){
-            photo= getRealPathFromURI(UserEventsActivity.this,photoUri);
+        switch(requestCode){
+
+            case IMAGE_GETTER:
+                if(data==null){
+                    return;
+                }
+                Uri photoUri= data.getData();
+
+                if(photoUri!=null){
+                    photo= getRealPathFromURI(UserEventsActivity.this,photoUri);
+                }
+                else{
+                    photo=data.getStringExtra("uri");
+                }
+                Intent intent = new Intent(UserEventsActivity.this,ImageCreateActivity.class);
+                intent.putExtra("image",photo);
+                startActivityForResult(intent,IMAGE_CREATE);
+                break;
+            case IMAGE_CREATE:
+                photo = data.getStringExtra("image");
+
+                try {
+                    FileInputStream str = new FileInputStream(new File(photo));
+                    Bitmap bitmap  = BitmapFactory.decodeStream(str);
+
+
+                    if(which_view ==select_logo){
+                        logo_image=photo;
+                        logo.setImageBitmap(bitmap);
+                        chosenDialog.hide();
+
+                    }
+                    else if(which_view==select_initial){
+                        initial_image=photo;
+                        initial.setImageBitmap(bitmap);
+                        chosenDialog.hide();
+
+                    }
+                }
+                catch(FileNotFoundException e){
+                    Log.e("onAct",e.toString());
+                }
+
+
         }
-        else{
-            photo=data.getStringExtra("uri");
-        }
 
 
-
-        try {
-            FileInputStream str = new FileInputStream(new File(photo));
-            Bitmap bitmap  = BitmapFactory.decodeStream(str);
-
-
-            if(which_view ==select_logo){
-                logo_image=photo;
-                logo.setImageBitmap(bitmap);
-                chosenDialog.hide();
-
-            }
-            else if(which_view==select_initial){
-                initial_image=photo;
-                initial.setImageBitmap(bitmap);
-                chosenDialog.hide();
-
-            }
-        }
-        catch(FileNotFoundException e){
-            Log.e("onAct",e.toString());
-        }
 
 
 
@@ -526,7 +542,7 @@ public class UserEventsActivity extends ActionBarActivity {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
                 Intent intent = intents.get(position);
-                startActivityForResult(intent, 1);
+                startActivityForResult(intent, IMAGE_GETTER);
 
                 return false;
             }

@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.graphics.drawable.Drawable;
 import android.hardware.Camera;
 import android.media.AudioManager;
+import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Environment;
 import android.os.Handler;
@@ -54,6 +55,7 @@ public class CameraActivity extends AppCompatActivity {
     Camera mCamera;
     //is back camera enabled
     boolean isBack =true;
+    private int orientation;
 
     //thread for camera triggering
     CameraHandler mThread;
@@ -245,6 +247,7 @@ public class CameraActivity extends AppCompatActivity {
         } else {  // back-facing
             result = (camInfo.orientation - degrees + 360) % 360;
         }
+        orientation = result;
         mCamera.setDisplayOrientation(result);
     }
 
@@ -265,6 +268,9 @@ public class CameraActivity extends AppCompatActivity {
     Camera.PictureCallback onPicTake = new Camera.PictureCallback() {
         @Override
         public void onPictureTaken(byte[] data, Camera camera) {
+
+
+
             File new_image;
             String file_name;
             do {
@@ -278,6 +284,14 @@ public class CameraActivity extends AppCompatActivity {
                 FileOutputStream output_stream = new FileOutputStream(new_image);
                 output_stream.write(data);
                 output_stream.close();
+                if(orientation==90) {
+                    ExifInterface exif = new ExifInterface(new_image.getAbsolutePath());
+
+                    exif.setAttribute(ExifInterface.TAG_ORIENTATION,"8");
+                    exif.saveAttributes();
+
+                }
+               
             }
             catch (FileNotFoundException e){
                 Log.e("Pic Callback",e.toString());
@@ -345,13 +359,15 @@ public class CameraActivity extends AppCompatActivity {
         }
 
         public void takePic(){
-
-                mCamera.autoFocus(new Camera.AutoFocusCallback() {
+            /*
+            mCamera.autoFocus(new Camera.AutoFocusCallback() {
                     @Override
                     public void onAutoFocus(boolean success, Camera camera) {
                         if(success) camera.takePicture(onShutter, null, onPicTake);
                     }
                 });
+            */
+            mCamera.takePicture(onShutter, null, onPicTake);
 
         }
 
