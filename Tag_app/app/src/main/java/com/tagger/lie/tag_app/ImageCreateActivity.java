@@ -1,5 +1,6 @@
 package com.tagger.lie.tag_app;
 
+import android.graphics.PointF;
 import android.media.FaceDetector;
 import android.os.Parcelable;
 import android.support.v7.app.AppCompatActivity;
@@ -7,12 +8,13 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.RelativeLayout;
 
+import java.util.ArrayList;
+
 public class ImageCreateActivity extends AppCompatActivity {
 
     private RelativeLayout main_layout;
     private String image;
-    private FaceDetector.Face[] faces;
-    private int face_count;
+    private ArrayList<float[]> faces;
 
 
     @Override
@@ -29,9 +31,20 @@ public class ImageCreateActivity extends AppCompatActivity {
             if(image!=null) {
                 fde = new Face_Detection_View(getApplicationContext());
                 fde.setImage(image);
-                faces = (FaceDetector.Face[])savedInstanceState.get("faces");
-                fde.setFaces(faces,face_count);
-                Log.e("saved", "saved");
+                Bundle float_arrays = savedInstanceState.getBundle("faces");
+                faces = new ArrayList<>();
+                int i =0;
+                float[] array;
+                do{
+                    i++;
+                   array= float_arrays.getFloatArray(i+"");
+                    faces.add(array);
+
+                }
+                while(array!=null);
+
+                fde.setFaces(faces);
+
             }
 
         }
@@ -40,7 +53,6 @@ public class ImageCreateActivity extends AppCompatActivity {
             fde = new Face_Detection_View(getApplicationContext());
             fde.setImage(image);
             faces = fde.detect();
-            face_count = fde.getFaceCount();
         }
 
 
@@ -59,10 +71,13 @@ public class ImageCreateActivity extends AppCompatActivity {
         if(image != null){
             saveInstanceState.putString("image",image);
         }
-        if(faces!=null){
+        if(faces!=null) {
+            Bundle face_bundle = new Bundle();
+            for (float[] float_array : faces) {
+                face_bundle.putFloatArray("1", float_array);
+            }
+            saveInstanceState.putBundle("faces", face_bundle);
 
-            //saveInstanceState.putParcelableArray("faces", faces);
-            saveInstanceState.putInt("face_count", face_count);
         }
 
 

@@ -23,6 +23,9 @@ import java.net.ConnectException;
  */
 public class Utils extends Application {
 
+
+
+
     public void key_dis(final EditText edit) {
 
         edit.setOnKeyListener(new View.OnKeyListener() {
