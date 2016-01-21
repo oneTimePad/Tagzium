@@ -27,6 +27,7 @@ public class ImageCreateActivity extends AppCompatActivity {
         Face_Detection_View fde = null;
 
         if(savedInstanceState!=null){
+            /*
             image =savedInstanceState.getString("image");
             if(image!=null) {
                 fde = new Face_Detection_View(getApplicationContext());
@@ -38,36 +39,48 @@ public class ImageCreateActivity extends AppCompatActivity {
                 do{
                     i++;
                    array= float_arrays.getFloatArray(i+"");
-                    faces.add(array);
-
+                    if(array!=null) {
+                        faces.add(array);
+                    }
                 }
                 while(array!=null);
 
                 fde.setFaces(faces);
 
             }
+            */
+            fde = new Face_Detection_View(getApplicationContext());
+            RelativeLayout.LayoutParams fde_params = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,RelativeLayout.LayoutParams.WRAP_CONTENT);
+            fde_params.addRule(RelativeLayout.CENTER_HORIZONTAL,RelativeLayout.TRUE);
+            fde_params.addRule(RelativeLayout.ALIGN_PARENT_TOP,RelativeLayout.TRUE);
 
+            main_layout.addView(fde,fde_params);
+            return;
         }
         if(image==null) {
             image = getIntent().getStringExtra("image");
             fde = new Face_Detection_View(getApplicationContext());
             fde.setImage(image);
-            faces = fde.detect();
+            fde.detect();
+            RelativeLayout.LayoutParams fde_params = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,RelativeLayout.LayoutParams.WRAP_CONTENT);
+            fde_params.addRule(RelativeLayout.CENTER_HORIZONTAL,RelativeLayout.TRUE);
+            fde_params.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
+
+            main_layout.addView(fde,fde_params);
         }
 
 
 
 
 
-        RelativeLayout.LayoutParams fde_params = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,RelativeLayout.LayoutParams.WRAP_CONTENT);
-        fde_params.addRule(RelativeLayout.CENTER_HORIZONTAL,RelativeLayout.TRUE);
-        fde_params.addRule(RelativeLayout.ALIGN_PARENT_TOP,RelativeLayout.TRUE);
 
-        main_layout.addView(fde,fde_params);
 
     }
-
+    /*
     public void onSaveInstanceState(Bundle saveInstanceState){
+        super.onSaveInstanceState(saveInstanceState);
+
+
         if(image != null){
             saveInstanceState.putString("image",image);
         }
@@ -81,5 +94,5 @@ public class ImageCreateActivity extends AppCompatActivity {
         }
 
 
-    }
+    }*/
 }

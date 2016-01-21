@@ -60,7 +60,7 @@ public class UserPageActivity extends ActionBarActivity
     private class success_get_user implements ReloginBox.Callback{
 
        public Object success(ArrayList<Object> args,String token,Long expiration){
-          APICall call = new APICall(UserPageActivity.this, "POST", "/users/get_user/", new JSONObject());
+          APICall call = new APICall(UserPageActivity.this, "POST", "/users/get_user", new JSONObject());
            call.authenticate(token, expiration);
 
 
@@ -162,7 +162,7 @@ public class UserPageActivity extends ActionBarActivity
                             expiration = Long.parseLong(payload.getString("exp"));
                         }
 
-                        APICall call = new APICall(UserPageActivity.this, "POST", "/users/get_user/", new JSONObject());
+                        APICall call = new APICall(UserPageActivity.this, "POST", "/users/get_user", new JSONObject());
                         call.authenticate(token, expiration);
 
                         call.connect();

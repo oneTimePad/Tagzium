@@ -413,7 +413,7 @@ public class UserEventsActivity extends ActionBarActivity {
                 return null;
             }
         }
-        APICall getEvents = new APICall(getApplicationContext(), "POST", "/events/retrieve_users/", request);
+        APICall getEvents = new APICall(getApplicationContext(), "POST", "/events/retrieve-users", request);
         utilities.refresh_token(UserEventsActivity.this,current_user.expiration_date,current_user.curr_token,getSharedPreferences("user_pref",MODE_WORLD_READABLE));
         getEvents.authenticate(current_user.curr_token,current_user.expiration_date);
 
@@ -483,8 +483,7 @@ public class UserEventsActivity extends ActionBarActivity {
         int screenWidth = display.getWidth();
 
         wmlp.width=screenWidth;
-        //wmlp.x = 100;   //x position
-        //wmlp.y = 1000;   //y position
+
 
 
 

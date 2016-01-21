@@ -11,7 +11,11 @@ import android.graphics.PointF;
 import android.hardware.camera2.params.Face;
 import android.media.ExifInterface;
 import android.media.FaceDetector;
+import android.os.Bundle;
 import android.os.Environment;
+import android.os.Parcel;
+import android.os.Parcelable;
+import android.text.style.SuperscriptSpan;
 import android.util.Log;
 import android.view.View;
 
@@ -31,6 +35,7 @@ class Face_Detection_View extends View {
 
     public Face_Detection_View(Context context) {
         super(context);
+        this.setId( new Integer(455));
         // Load an image from SD Card
 
     }
@@ -50,6 +55,67 @@ class Face_Detection_View extends View {
         return retVal;
     }
 
+    @Override
+    public Parcelable onSaveInstanceState(){
+        Parcelable super_state = super.onSaveInstanceState();
+
+        SavedState ss = new SavedState(super_state);
+
+        ss.saved_faces = point_list;
+        ss.saved_image = background_image;
+
+        return ss;
+
+    }
+
+    @Override
+    public void onRestoreInstanceState(Parcelable state){
+
+        if(!(state instanceof SavedState)){
+            super.onRestoreInstanceState(state);
+            return;
+        }
+
+        SavedState ss = (SavedState)state;
+        super.onRestoreInstanceState(ss.getSuperState());
+
+       this.point_list = ss.saved_faces;
+       this.background_image = ss.saved_image;
+    }
+
+   static class SavedState extends BaseSavedState {
+
+        ArrayList<float[]> saved_faces;
+        Bitmap saved_image;
+
+        SavedState(Parcelable super_state){
+            super(super_state);
+        }
+
+        SavedState(Parcel in){
+            super(in);
+            this.saved_faces = in.readArrayList(null);
+            this.saved_image = in.readParcelable(null);
+
+        }
+
+        @Override
+        public void writeToParcel(Parcel out, int flags){
+            super.writeToParcel(out,flags);
+            //out.writeSerializable(this.saved_faces);
+            //out.writeParcelable(this.saved_image,flags);
+        }
+
+        public static final Parcelable.Creator<SavedState> CREATOR =
+                new Parcelable.Creator<SavedState>(){
+                    public SavedState createFromParcel(Parcel in){
+                        return new SavedState(in);
+                    }
+                    public SavedState[] newArray(int size){
+                        return new SavedState[size];
+                    }
+                };
+    }
 
 
 
@@ -65,12 +131,14 @@ class Face_Detection_View extends View {
             int orientation = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED);
 
             switch (orientation) {
+                case ExifInterface.ORIENTATION_ROTATE_90:
+                    background_image = rotateImage(background_image, 90);
+                    break;
                 case ExifInterface.ORIENTATION_ROTATE_270:
-
-                    background_image = rotateImage(background_image, 270);
+                    background_image = rotateImage(background_image,270);
                     break;
 
-                // etc.
+
             }
         } catch (IOException e) {
             Log.e("FaceDetector", e.toString());
@@ -133,5 +201,30 @@ class Face_Detection_View extends View {
 
 
         }
+    }
+    @Override
+    protected void onMeasure(int width_measure_spec, int height_measure_spec){
+
+        int width=0,height = 0;
+        int width_mode = MeasureSpec.getMode(width_measure_spec);
+        int width_size = MeasureSpec.getSize(width_measure_spec)-getPaddingRight()-getPaddingLeft();
+        int height_mode = MeasureSpec.getMode(height_measure_spec);
+        int height_size = MeasureSpec.getSize(height_measure_spec)-getPaddingTop()-getPaddingBottom();
+
+        if(width_mode == MeasureSpec.EXACTLY){
+            width= width_size;
+        }
+        else if(width_mode == MeasureSpec.AT_MOST){
+            width = Math.min(width_size,((View)this.getParent()).getWidth());
+        }
+
+        if(height_mode == MeasureSpec.EXACTLY){
+            height = height_size;
+        }
+        else if(height_mode == MeasureSpec.AT_MOST){
+            height = Math.min(height_size, ((View)this.getParent()).getHeight());
+        }
+
+        setMeasuredDimension(width,height);
     }
 }

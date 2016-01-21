@@ -16,7 +16,7 @@ urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^auth/',include(authentication))
 ]
-router = SimpleRouter(trailing_slash=True)
+router = SimpleRouter(trailing_slash=False)
 router.register(r'users',UserViewSet,'users')
 urlpatterns+=router.urls
 router = EventRouter(trailing_slash=False)

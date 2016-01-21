@@ -149,8 +149,6 @@ class EventViewSet(viewsets.ModelViewSet):
     serializer_class = EventSerializer
 
     def create(self,request):
-        
-
         if not event.is_valid():
             return Response(event.errors,status=status.HTTP_400_BAD_REQUEST)
         event = event.create()
@@ -163,7 +161,7 @@ class EventViewSet(viewsets.ModelViewSet):
     def put_image_file(self,request):
         pass
 
-    @list_route(methods=['post'])
+    @detail_route(methods=['post'])
     def retrieve_users(self,request):
 
 

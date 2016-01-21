@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-
+        Log.e("Helo","helo");
         Utils utilities = (Utils)getApplication();
 
 

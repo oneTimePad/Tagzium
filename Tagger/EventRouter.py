@@ -1,4 +1,4 @@
-from rest_framework.routers import Route, SimpleRouter
+from rest_framework.routers import Route, SimpleRouter, DynamicDetailRoute
 
 class EventRouter(SimpleRouter):
 
@@ -6,7 +6,7 @@ class EventRouter(SimpleRouter):
         Route(
             url=r'^{prefix}/create',
             mapping={'post':'create'},
-            name='{basename}-creare',
+            name='{basename}-create',
             initkwargs={}
         ),
 
@@ -23,4 +23,10 @@ class EventRouter(SimpleRouter):
             name='{basename}-post_image_data',
             initkwargs={}
         ),
+        DynamicDetailRoute(
+            url=r'^{prefix}/{methodnamehyphen}$',
+            name='{basename}-{methodnamehyphen}',
+            initkwargs={}
+        )
+
     ]

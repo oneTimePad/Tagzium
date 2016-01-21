@@ -284,12 +284,18 @@ public class CameraActivity extends AppCompatActivity {
                 FileOutputStream output_stream = new FileOutputStream(new_image);
                 output_stream.write(data);
                 output_stream.close();
-                if(orientation==90) {
+                if(orientation==90&& isBack) {
+                    ExifInterface exif = new ExifInterface(new_image.getAbsolutePath());
+
+                    exif.setAttribute(ExifInterface.TAG_ORIENTATION,"6");
+                    exif.saveAttributes();
+
+                }
+                else if(orientation==90 && !isBack){
                     ExifInterface exif = new ExifInterface(new_image.getAbsolutePath());
 
                     exif.setAttribute(ExifInterface.TAG_ORIENTATION,"8");
                     exif.saveAttributes();
-
                 }
 
             }
