@@ -22,7 +22,10 @@ from rest_framework import viewsets
 from django.contrib.auth import get_user_model
 from rest_framework.decorators import list_route,detail_route
 from django.core.cache import cache
+from django.views.generic import View
 from django.core.files.uploadedfile import InMemoryUploadedFile
+
+
 
 
 
@@ -124,6 +127,12 @@ class UserViewSet(viewsets.ModelViewSet):
             user.first_name=data['new_name']
             user.save()
             return Response({'Status':'Success'})
+        @list_route(methods=['post'])
+        def user_list_query(self,request,pk=None):
+            User  = get_user_model()
+            users_list = User.objects.filter(username__startswith=request.data["search_tag"])
+            users = ProfileSerializer(users_list,many=True)
+            return Response(users.data)
 
 
 
@@ -216,8 +225,10 @@ class EmailConfirmation(APIView):
 
 class Signup(APIView):
 
-    def post(self, request, **kwargs):
 
+
+    def post(self, request, **kwargs):
+        
         user_name = request.data['user']
         password = request.data['password']
         name =  request.data['name']

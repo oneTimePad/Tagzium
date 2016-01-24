@@ -26,6 +26,7 @@ public class FetchSuggestionsService extends Service {
     private Utils utilities;
     private User current_user;
     private String msearch_tag;
+    private  String METHOD_GET_SUGGESTIONS = "1";
 
     @Override
     public void onCreate(){
@@ -43,6 +44,7 @@ public class FetchSuggestionsService extends Service {
 
     @Override
     public void onStart(Intent intent,int startId){
+        //android.os.Debug.waitForDebugger();
         try{
             METHOD_NAME = intent.getIntExtra(METHOD, 1);
             msearch_tag = intent.getStringExtra("search_tag");
@@ -71,7 +73,7 @@ public class FetchSuggestionsService extends Service {
                 request.put("search_tag",msearch_tag);
                 switch (METHOD_NAME) {
                     case GET_SEARCH_SUGGESTION:
-                        APICall get_suggestions = new APICall(getApplicationContext(), "POST", "/events/retrieve-users", request);
+                        APICall get_suggestions = new APICall(getApplicationContext(), "POST", "/users/user_list_query", request);
                         utilities.refresh_token(mContext, current_user.expiration_date, current_user.curr_token, getSharedPreferences("user_pref", MODE_WORLD_READABLE));
                         get_suggestions.authenticate(current_user.curr_token, current_user.expiration_date);
 
@@ -102,7 +104,7 @@ public class FetchSuggestionsService extends Service {
             try {
                 switch (METHOD_NAME){
                     case GET_SEARCH_SUGGESTION:
-                        sendBroadcast(new Intent(METHOD).putExtra("Response",response.toString()));
+                        sendBroadcast(new Intent(METHOD_GET_SUGGESTIONS).putExtra("Response",response.toString()));
                         break;
                 }
             }

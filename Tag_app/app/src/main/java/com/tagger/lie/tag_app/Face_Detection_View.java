@@ -1,6 +1,8 @@
 package com.tagger.lie.tag_app;
 
 import android.app.DialogFragment;
+import android.app.FragmentManager;
+import android.app.FragmentTransaction;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -26,7 +28,11 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ListAdapter;
+import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
@@ -36,6 +42,7 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 class Face_Detection_View extends View {
     private static final int MAX_FACES = 10;
@@ -47,15 +54,53 @@ class Face_Detection_View extends View {
     // preallocate for onDraw(...)
     private PointF tmp_point = new PointF();
     private Paint tmp_paint = new Paint();
+    public static User current_user;
 
-    private static ArrayList<JSONObject> mRightListOverlapData,mRightTempData=null;
+    private static ArrayList<JSONObject> mRightListOverlapData,mRightTempData,cacheQueries=null;
 
-    public Face_Detection_View(Context context) {
-        super(context);
-        this.setId( new Integer(455));
-        // Load an image from SD Card
+    private FragmentManager fm;
+
+    private static ProgressBar progbar;
+
+    public void setSearchSuggestions(JSONArray root){
+
+        try{
+            JSONArray search_suggestions = root;
+
+            if(!search_suggestions.getJSONObject(0).has("no data")){
+                mRightTempData.clear();
+                mRightListOverlapData.clear();
+                mRightListOverlapData.clear();
+                for(int i =0; i< search_suggestions.length();i++){
+                    mRightTempData.add(search_suggestions.getJSONObject(i));
+                }
+            }
+            else{
+                Log.d("No data","No data");
+                //Toast.makeText(getActivity(),"No data realted to query",Toast.LENGTH_SHORT).show();
+
+            }
+
+        }
+        catch (JSONException e){
+            e.printStackTrace();
+        }
+
 
     }
+
+
+
+
+    public Face_Detection_View(Context context,FragmentManager fm,User user) {
+        super(context);
+        this.setId(new Integer(455));
+        this.fm = fm;
+        current_user = user;
+
+    }
+
+
 
     public void setImage(String IMAGE_FN){
         this.IMAGE_FN = IMAGE_FN;
@@ -101,7 +146,10 @@ class Face_Detection_View extends View {
     }
 
 
-
+    public void changeProg(){
+        progbar.setVisibility(View.GONE);
+        return;
+    }
 
     public static class SelectUser extends DialogFragment{
         private final String METHOD = "method";
@@ -114,63 +162,42 @@ class Face_Detection_View extends View {
 
         }
 
-        private void setSearchSuggestions(JSONArray root){
-
-            try{
-                JSONArray search_suggestions = root;
-
-                if(!search_suggestions.getJSONObject(0).has("no data")){
-                    mRightTempData.clear();
-                    mRightListOverlapData.clear();
-                    mRightListOverlapData.clear();
-                    for(int i =0; i< search_suggestions.length();i++){
-                        mRightTempData.add(search_suggestions.getJSONObject(i));
-                    }
-                }
-                else{
-                    Toast.makeText(getContext(),"No data realted to query",Toast.LENGTH_SHORT).show();
-
-                }
-
-            }
-            catch (JSONException e){
-                e.printStackTrace();
-            }
-
-
-        }
 
 
 
-        private BroadcastReceiver mReceiverSearch = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                JSONArray response;
 
-                try{
-                    response = new JSONArray(intent.getStringExtra("Response"));
-                    setSearchSuggestions(response);
-
-                }catch (JSONException e){
-                    e.printStackTrace();
-                }
-
-            }
-        }
 
         private  void startServiceForSearchSuggestion(String search_tag){
             Intent intent = new Intent(getActivity(),FetchSuggestionsService.class);
             intent.putExtra(METHOD,GET_SEARCH_SUGGESTION);
             intent.putExtra("search_tag",search_tag);
+            intent.putExtra("current_user",current_user);
             getActivity().startService(intent);
         }
 
         @Override
-        public View onCreateView(LayoutInflater inflater, ViewGroup container,Bundle savedInstanceState){
+        public View onCreateView(LayoutInflater inflater, final ViewGroup container,Bundle savedInstanceState){
 
-            RelativeLayout dialog_layout = new RelativeLayout(getContext());
+            View v = inflater.inflate(R.layout.search_dialog,container);
 
-            final EditText search_box = new EditText(getContext());
+            progbar = (ProgressBar)(v.findViewById(R.id.progbar));
+
+
+
+            final ListView suggestions_list = (ListView)(v.findViewById(R.id.list_sugg));
+            mRightListOverlapData = new ArrayList<JSONObject>();
+            mRightTempData = new ArrayList<JSONObject>();
+            cacheQueries = new ArrayList<>();
+            final RightOverlapAdapter mOverlapAdapter = new RightOverlapAdapter(v.getContext(),mRightListOverlapData);
+
+            suggestions_list.setAdapter(mOverlapAdapter);
+
+            final EditText search_box = (EditText)(v.findViewById(R.id.search_text));
+            search_box.setHint("username");
+            final Button search = (Button)(v.findViewById(R.id.button_search));
+            search.setText("Search");
+
+            ((ImageCreateActivity)getActivity()).utilities.key_dis(search_box);
 
             search_box.addTextChangedListener(new TextWatcher() {
                 @Override
@@ -185,22 +212,46 @@ class Face_Detection_View extends View {
 
                 @Override
                 public void afterTextChanged(Editable s) {
+
                     mRightListOverlapData.clear();
                     String search_tag = search_box.getText().toString();
                     if (search_tag == null || search_box.equals("")) {
                         mRightTempData.clear();
                         mOverlapAdapter.notifyDataSetChanged();
-                    } else if (search_tag.length() == 1) {
-                        mRightListOverlapData.addAll(mRightTempData);
-                        mOverlapAdapter.notifyDataSetChanged();
-                        startServiceForSearchSuggestion(search_tag);
+                    }
+                    else if (search_tag.length() == 1) {
+
+                        if(cacheQueries.size()!=0){
+                            try {
+                                for (int i = 0; i < cacheQueries.size(); i++) {
+                                    if (cacheQueries.get(i).getString("username").toLowerCase()
+                                            .startsWith(search_tag.toLowerCase())) {
+                                        mRightListOverlapData.add(cacheQueries.get(i));
+                                    }
+                                }
+
+                            }
+                            catch (JSONException e){
+                                e.printStackTrace();
+
+                            }
+
+                        }
+                        else {
+                            //progbar.setVisibility(View.VISIBLE);
+                            //progbar.bringToFront();
+                            mRightListOverlapData.addAll(mRightTempData);
+                            mOverlapAdapter.notifyDataSetChanged();
+                            startServiceForSearchSuggestion(search_tag);
+                        }
                     } else {
                         try {
                             if (mRightTempData.size() > 0) {
                                 for (int i = 0; i < mRightTempData.size(); i++) {
-                                    if (mRightTempData.get(i).getString("search_text").toLowerCase()
+                                    if (mRightTempData.get(i).getString("username").toLowerCase()
                                             .startsWith(search_tag.toLowerCase())) {
                                         mRightListOverlapData.add(mRightTempData.get(i));
+                                        cacheQueries.add(mRightTempData.get(i));
                                     }
                                 }
 
@@ -217,6 +268,29 @@ class Face_Detection_View extends View {
                     }
                 }
             });
+            /*
+            RelativeLayout.LayoutParams search_box_params = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,RelativeLayout.LayoutParams.WRAP_CONTENT);
+            search_box_params.addRule(RelativeLayout.ALIGN_PARENT_TOP,RelativeLayout.TRUE);
+            search_box_params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
+            search_box.setId(new Integer(1));
+
+            RelativeLayout.LayoutParams button_params = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,RelativeLayout.LayoutParams.WRAP_CONTENT);
+            button_params.addRule(RelativeLayout.RIGHT_OF,search_box.getId());
+            button_params.addRule(RelativeLayout.ALIGN_PARENT_TOP,RelativeLayout.TRUE);
+
+            RelativeLayout.LayoutParams listview_params = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,RelativeLayout.LayoutParams.WRAP_CONTENT);
+            listview_params.addRule(RelativeLayout.CENTER_HORIZONTAL,RelativeLayout.TRUE);
+            listview_params.addRule(RelativeLayout.BELOW, search_box.getId());
+
+
+            dialog_layout.addView(search_box, search_box_params);
+            dialog_layout.addView(search, button_params);
+            dialog_layout.addView(suggestions_list,listview_params);
+            */
+
+
+            return v;
+
 
 
         }
@@ -225,13 +299,14 @@ class Face_Detection_View extends View {
     @Override
     public boolean onTouchEvent(MotionEvent e){
         super.onTouchEvent(e);
-        if(e.getAction() == MotionEvent.ACTION_UP){
+        if(e.getAction() == MotionEvent.ACTION_DOWN){
             int x = (int)e.getX();
             int y = (int)e.getY();
             for(float[] points: point_list){
                 if(x<points[2]&&x>points[0]){
                     if(y<points[3]&&y>points[1]){
-
+                        SelectUser dialog = new SelectUser();
+                        dialog.show(fm.beginTransaction(),"dialog");
                         return true;
                     }
                 }

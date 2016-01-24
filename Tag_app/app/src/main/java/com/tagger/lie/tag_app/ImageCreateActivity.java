@@ -1,5 +1,11 @@
 package com.tagger.lie.tag_app;
 
+import android.app.FragmentManager;
+import android.app.FragmentTransaction;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.PointF;
 import android.media.FaceDetector;
 import android.os.Parcelable;
@@ -8,6 +14,9 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.RelativeLayout;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+
 import java.util.ArrayList;
 
 public class ImageCreateActivity extends AppCompatActivity {
@@ -15,16 +24,47 @@ public class ImageCreateActivity extends AppCompatActivity {
     private RelativeLayout main_layout;
     private String image;
     private ArrayList<float[]> faces;
+    public Utils utilities;
+    private Face_Detection_View fde;
+    private User current_user;
+
+    private String METHOD_GET_SUGGESTIONS ="1";
+
+
+
+
+    private BroadcastReceiver mReceiverSearch = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            JSONArray response;
+
+            try{
+                response = new JSONArray(intent.getStringExtra("Response"));
+                fde.setSearchSuggestions(response);
+                //fde.changeProg();
+
+            }catch (JSONException e){
+                e.printStackTrace();
+            }
+
+        }
+    };
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        current_user = (User)getIntent().getExtras().get("current_user");
         setContentView(R.layout.activity_image_create);
 
-        main_layout = (RelativeLayout)findViewById(R.id.image_create);
 
-        Face_Detection_View fde = null;
+        FragmentManager fm =  getFragmentManager();
+
+        this.registerReceiver(mReceiverSearch, new IntentFilter(METHOD_GET_SUGGESTIONS));
+
+        main_layout = (RelativeLayout)findViewById(R.id.image_create);
+        utilities = (Utils)getApplication();
+
 
         if(savedInstanceState!=null){
             /*
@@ -49,7 +89,7 @@ public class ImageCreateActivity extends AppCompatActivity {
 
             }
             */
-            fde = new Face_Detection_View(getApplicationContext());
+            fde = new Face_Detection_View(getApplicationContext(),fm,current_user);
             RelativeLayout.LayoutParams fde_params = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,RelativeLayout.LayoutParams.WRAP_CONTENT);
             fde_params.addRule(RelativeLayout.CENTER_HORIZONTAL,RelativeLayout.TRUE);
             fde_params.addRule(RelativeLayout.ALIGN_PARENT_TOP,RelativeLayout.TRUE);
@@ -59,7 +99,7 @@ public class ImageCreateActivity extends AppCompatActivity {
         }
         if(image==null) {
             image = getIntent().getStringExtra("image");
-            fde = new Face_Detection_View(getApplicationContext());
+            fde = new Face_Detection_View(getApplicationContext(),fm,current_user);
             fde.setImage(image);
             fde.detect();
             RelativeLayout.LayoutParams fde_params = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,RelativeLayout.LayoutParams.WRAP_CONTENT);
@@ -95,4 +135,7 @@ public class ImageCreateActivity extends AppCompatActivity {
 
 
     }*/
+
+
+
 }

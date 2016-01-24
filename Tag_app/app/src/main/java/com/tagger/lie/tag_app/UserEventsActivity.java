@@ -324,6 +324,7 @@ public class UserEventsActivity extends ActionBarActivity {
                 }
                 Intent intent = new Intent(UserEventsActivity.this,ImageCreateActivity.class);
                 intent.putExtra("image",photo);
+                intent.putExtra("current_user",current_user);
                 startActivityForResult(intent,IMAGE_CREATE);
                 break;
             case IMAGE_CREATE:

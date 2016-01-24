@@ -5,8 +5,9 @@ from tagger.views import *
 from rest_framework.routers import SimpleRouter,DefaultRouter
 from rest_framework_jwt.views import obtain_jwt_token,refresh_jwt_token,verify_jwt_token
 from .EventRouter import *
+from django.views.decorators.csrf import csrf_exempt
 authentication = [
-    url(r'^signup$',Signup.as_view()),
+    url(r'^signup$',csrf_exempt(Signup.as_view())),
     url(r'^login$',obtain_jwt_token),
     url(r'^refresh$',refresh_jwt_token),
     url(r'^verify$',verify_jwt_token),
@@ -19,7 +20,7 @@ urlpatterns = [
 router = SimpleRouter(trailing_slash=False)
 router.register(r'users',UserViewSet,'users')
 urlpatterns+=router.urls
+print(router.urls)
 router = EventRouter(trailing_slash=False)
 router.register(r'events',EventViewSet,'events')
 urlpatterns+=router.urls
-print(router.urls)
