@@ -1,6 +1,9 @@
 package com.tagger.lie.tag_app;
 
+import android.app.DialogFragment;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -15,9 +18,21 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.text.style.SuperscriptSpan;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.RelativeLayout;
+import android.widget.Toast;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,6 +47,8 @@ class Face_Detection_View extends View {
     // preallocate for onDraw(...)
     private PointF tmp_point = new PointF();
     private Paint tmp_paint = new Paint();
+
+    private static ArrayList<JSONObject> mRightListOverlapData,mRightTempData=null;
 
     public Face_Detection_View(Context context) {
         super(context);
@@ -83,6 +100,149 @@ class Face_Detection_View extends View {
        this.background_image = ss.saved_image;
     }
 
+
+
+
+    public static class SelectUser extends DialogFragment{
+        private final String METHOD = "method";
+        private final int GET_SEARCH_SUGGESTION = 1;
+
+        @Override
+        public void onCreate(Bundle savedInstanceState){
+            super.onCreate(savedInstanceState);
+
+
+        }
+
+        private void setSearchSuggestions(JSONArray root){
+
+            try{
+                JSONArray search_suggestions = root;
+
+                if(!search_suggestions.getJSONObject(0).has("no data")){
+                    mRightTempData.clear();
+                    mRightListOverlapData.clear();
+                    mRightListOverlapData.clear();
+                    for(int i =0; i< search_suggestions.length();i++){
+                        mRightTempData.add(search_suggestions.getJSONObject(i));
+                    }
+                }
+                else{
+                    Toast.makeText(getContext(),"No data realted to query",Toast.LENGTH_SHORT).show();
+
+                }
+
+            }
+            catch (JSONException e){
+                e.printStackTrace();
+            }
+
+
+        }
+
+
+
+        private BroadcastReceiver mReceiverSearch = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                JSONArray response;
+
+                try{
+                    response = new JSONArray(intent.getStringExtra("Response"));
+                    setSearchSuggestions(response);
+
+                }catch (JSONException e){
+                    e.printStackTrace();
+                }
+
+            }
+        }
+
+        private  void startServiceForSearchSuggestion(String search_tag){
+            Intent intent = new Intent(getActivity(),FetchSuggestionsService.class);
+            intent.putExtra(METHOD,GET_SEARCH_SUGGESTION);
+            intent.putExtra("search_tag",search_tag);
+            getActivity().startService(intent);
+        }
+
+        @Override
+        public View onCreateView(LayoutInflater inflater, ViewGroup container,Bundle savedInstanceState){
+
+            RelativeLayout dialog_layout = new RelativeLayout(getContext());
+
+            final EditText search_box = new EditText(getContext());
+
+            search_box.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                    return;
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    return;
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                    mRightListOverlapData.clear();
+                    String search_tag = search_box.getText().toString();
+                    if (search_tag == null || search_box.equals("")) {
+                        mRightTempData.clear();
+                        mOverlapAdapter.notifyDataSetChanged();
+                    } else if (search_tag.length() == 1) {
+                        mRightListOverlapData.addAll(mRightTempData);
+                        mOverlapAdapter.notifyDataSetChanged();
+                        startServiceForSearchSuggestion(search_tag);
+                    } else {
+                        try {
+                            if (mRightTempData.size() > 0) {
+                                for (int i = 0; i < mRightTempData.size(); i++) {
+                                    if (mRightTempData.get(i).getString("search_text").toLowerCase()
+                                            .startsWith(search_tag.toLowerCase())) {
+                                        mRightListOverlapData.add(mRightTempData.get(i));
+                                    }
+                                }
+
+                                if (mRightListOverlapData.size() == 0) {
+                                    JSONObject noData = new JSONObject();
+                                    noData.put("search_text", "No Data");
+                                    mRightListOverlapData.add(noData);
+                                }
+                            }
+                            mOverlapAdapter.notifyDataSetChanged();
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            });
+
+
+        }
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent e){
+        super.onTouchEvent(e);
+        if(e.getAction() == MotionEvent.ACTION_UP){
+            int x = (int)e.getX();
+            int y = (int)e.getY();
+            for(float[] points: point_list){
+                if(x<points[2]&&x>points[0]){
+                    if(y<points[3]&&y>points[1]){
+
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+
+
+
    static class SavedState extends BaseSavedState {
 
         ArrayList<float[]> saved_faces;
@@ -102,8 +262,8 @@ class Face_Detection_View extends View {
         @Override
         public void writeToParcel(Parcel out, int flags){
             super.writeToParcel(out,flags);
-            //out.writeSerializable(this.saved_faces);
-            //out.writeParcelable(this.saved_image,flags);
+            out.writeSerializable(this.saved_faces);
+            out.writeParcelable(this.saved_image, flags);
         }
 
         public static final Parcelable.Creator<SavedState> CREATOR =
