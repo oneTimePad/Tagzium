@@ -28,6 +28,9 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListAdapter;
@@ -73,6 +76,7 @@ class Face_Detection_View extends View {
                 mRightListOverlapData.clear();
                 for(int i =0; i< search_suggestions.length();i++){
                     mRightTempData.add(search_suggestions.getJSONObject(i));
+                    cacheQueries.add(search_suggestions.getJSONObject(i));
                 }
             }
             else{
@@ -162,6 +166,16 @@ class Face_Detection_View extends View {
 
         }
 
+        @Override
+        public void onStart(){
+            super.onStart();
+            Window window = getDialog().getWindow();
+            WindowManager.LayoutParams windowParams = window.getAttributes();
+            windowParams.dimAmount = 0f;
+            windowParams.flags |= WindowManager.LayoutParams.FLAG_DIM_BEHIND;
+            window.setAttributes(windowParams);
+        }
+
 
 
 
@@ -185,6 +199,10 @@ class Face_Detection_View extends View {
 
 
             final ListView suggestions_list = (ListView)(v.findViewById(R.id.list_sugg));
+
+
+
+
             mRightListOverlapData = new ArrayList<JSONObject>();
             mRightTempData = new ArrayList<JSONObject>();
             cacheQueries = new ArrayList<>();
@@ -196,6 +214,22 @@ class Face_Detection_View extends View {
             search_box.setHint("username");
             final Button search = (Button)(v.findViewById(R.id.button_search));
             search.setText("Search");
+
+            suggestions_list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    try {
+                        search_box.setText(mRightListOverlapData.get(position).getString("username"));
+                        search_box.setSelection(search_box.getEditableText().length());
+                    }
+                    catch (JSONException e){
+                        e.printStackTrace();
+                    }
+                }
+            });
+
+
+
 
             ((ImageCreateActivity)getActivity()).utilities.key_dis(search_box);
 
@@ -215,7 +249,7 @@ class Face_Detection_View extends View {
 
                     mRightListOverlapData.clear();
                     String search_tag = search_box.getText().toString();
-                    if (search_tag == null || search_box.equals("")) {
+                    if (search_tag == null || search_tag.equals("")) {
                         mRightTempData.clear();
                         mOverlapAdapter.notifyDataSetChanged();
                     }
@@ -230,6 +264,11 @@ class Face_Detection_View extends View {
                                     }
                                 }
 
+                                if(mRightListOverlapData.size()!=0){
+                                    mOverlapAdapter.notifyDataSetChanged();
+                                }
+
+
                             }
                             catch (JSONException e){
                                 e.printStackTrace();
@@ -237,21 +276,22 @@ class Face_Detection_View extends View {
                             }
 
                         }
-                        else {
+                        if(mRightListOverlapData.size()==0) {
                             //progbar.setVisibility(View.VISIBLE);
                             //progbar.bringToFront();
                             mRightListOverlapData.addAll(mRightTempData);
                             mOverlapAdapter.notifyDataSetChanged();
+
                             startServiceForSearchSuggestion(search_tag);
                         }
                     } else {
                         try {
+                            mRightListOverlapData.clear();
                             if (mRightTempData.size() > 0) {
                                 for (int i = 0; i < mRightTempData.size(); i++) {
                                     if (mRightTempData.get(i).getString("username").toLowerCase()
                                             .startsWith(search_tag.toLowerCase())) {
                                         mRightListOverlapData.add(mRightTempData.get(i));
-                                        cacheQueries.add(mRightTempData.get(i));
                                     }
                                 }
 
@@ -261,6 +301,16 @@ class Face_Detection_View extends View {
                                     mRightListOverlapData.add(noData);
                                 }
                             }
+                            else if(cacheQueries.size()>0){
+                                for (int i = 0; i < cacheQueries.size(); i++) {
+                                    if (cacheQueries.get(i).getString("username").toLowerCase()
+                                            .startsWith(search_tag.toLowerCase())) {
+                                        mRightListOverlapData.add(cacheQueries.get(i));
+                                    }
+                                }
+
+                            }
+
                             mOverlapAdapter.notifyDataSetChanged();
                         } catch (JSONException e) {
                             e.printStackTrace();

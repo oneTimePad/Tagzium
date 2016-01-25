@@ -32,6 +32,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@+id/search_text"
+        android:divider="@color/colorAccent"
+        android:dividerHeight="10.0sp"
         android:id="@+id/list_sugg">
     </ListView>
 

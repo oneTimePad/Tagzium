@@ -130,7 +130,7 @@ class UserViewSet(viewsets.ModelViewSet):
         @list_route(methods=['post'])
         def user_list_query(self,request,pk=None):
             User  = get_user_model()
-            users_list = User.objects.filter(username__startswith=request.data["search_tag"])
+            users_list = User.objects.filter(username__startswith=request.data["search_tag"]).order_by('username')
             users = ProfileSerializer(users_list,many=True)
             return Response(users.data)
 
@@ -228,7 +228,7 @@ class Signup(APIView):
 
 
     def post(self, request, **kwargs):
-        
+
         user_name = request.data['user']
         password = request.data['password']
         name =  request.data['name']

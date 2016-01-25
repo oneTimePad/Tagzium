@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -63,6 +64,7 @@ public class RightOverlapAdapter extends BaseAdapter{
         hold.text = (TextView)rowView.findViewById(R.id.suggestion);
         try {
             hold.text.setText(items.get(position).getString("username"));
+            hold.text.setTextSize(50);
         }
         catch(JSONException e){
             e.printStackTrace();
