@@ -30,6 +30,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
@@ -59,7 +60,10 @@ class Face_Detection_View extends View {
     private Paint tmp_paint = new Paint();
     public static User current_user;
 
+    private static int pre_last=0;
+
     private static ArrayList<JSONObject> mRightListOverlapData,mRightTempData,cacheQueries=null;
+    private static RightOverlapAdapter mOverlapAdapter;
 
     private FragmentManager fm;
 
@@ -78,12 +82,15 @@ class Face_Detection_View extends View {
                     mRightTempData.add(search_suggestions.getJSONObject(i));
                     cacheQueries.add(search_suggestions.getJSONObject(i));
                 }
+                mRightListOverlapData.addAll(mRightTempData);
+
             }
             else{
                 Log.d("No data","No data");
                 //Toast.makeText(getActivity(),"No data realted to query",Toast.LENGTH_SHORT).show();
 
             }
+            mOverlapAdapter.notifyDataSetChanged();
 
         }
         catch (JSONException e){
@@ -203,10 +210,11 @@ class Face_Detection_View extends View {
 
 
 
+
             mRightListOverlapData = new ArrayList<JSONObject>();
             mRightTempData = new ArrayList<JSONObject>();
             cacheQueries = new ArrayList<>();
-            final RightOverlapAdapter mOverlapAdapter = new RightOverlapAdapter(v.getContext(),mRightListOverlapData);
+           mOverlapAdapter = new RightOverlapAdapter(v.getContext(),mRightListOverlapData);
 
             suggestions_list.setAdapter(mOverlapAdapter);
 
@@ -221,13 +229,37 @@ class Face_Detection_View extends View {
                     try {
                         search_box.setText(mRightListOverlapData.get(position).getString("username"));
                         search_box.setSelection(search_box.getEditableText().length());
-                    }
-                    catch (JSONException e){
+                    } catch (JSONException e) {
                         e.printStackTrace();
                     }
                 }
             });
 
+
+            suggestions_list.setOnScrollListener(new AbsListView.OnScrollListener() {
+                @Override
+                public void onScrollStateChanged(AbsListView view, int scrollState) {
+                    return;
+                }
+
+                @Override
+                public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
+
+                    switch (view.getId()) {
+                        case android.R.id.list:
+
+                            final int lastItem = firstVisibleItem + visibleItemCount;
+
+                            if (lastItem == totalItemCount) {
+                                if (pre_last != lastItem) {
+                                    startServiceForSearchSuggestion(search_box.getText().toString());
+                                    pre_last = lastItem;
+                                }
+                            }
+
+                    }
+                }
+            });
 
 
 
@@ -279,8 +311,6 @@ class Face_Detection_View extends View {
                         if(mRightListOverlapData.size()==0) {
                             //progbar.setVisibility(View.VISIBLE);
                             //progbar.bringToFront();
-                            mRightListOverlapData.addAll(mRightTempData);
-                            mOverlapAdapter.notifyDataSetChanged();
 
                             startServiceForSearchSuggestion(search_tag);
                         }

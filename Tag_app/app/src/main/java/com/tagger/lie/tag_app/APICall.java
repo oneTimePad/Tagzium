@@ -79,7 +79,7 @@ public class APICall {
                         return;
                     }
                     try {
-                       con = (HttpURLConnection)(new URL("http://172.31.237.185:2000"+call).openConnection());
+                       con = (HttpURLConnection)(new URL("http://192.168.233.214:2000"+call).openConnection());
 
 
                         con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
